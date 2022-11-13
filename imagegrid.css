@@ -29,13 +29,31 @@
   z-index: 1;
 }
 
+.header-prompt {
+  font-family: Arial, Helvetica, sans-serif;
+  color: green;
+  grid-row: 1;
+}
+
+.header-model-name {
+  font-family: Arial, Helvetica, sans-serif;
+  color: blue;
+  grid-row: 2;
+}
+
+.header-sampler {
+  font-family: Arial, Helvetica, sans-serif;
+  color: black;
+  grid-row: 3;
+}
+
+.header-checkbox {
+  grid-row: 4;
+}
+
 img {
   width: 128px;
   height: 128px;
-}
-
-input[type="checkbox"] {
-  visibility: hidden;
 }
 
 .tooltip .tooltiptext img {

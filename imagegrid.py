@@ -14,8 +14,6 @@ re_png_invokeai = re.compile(r"(\d+).(\d+)\.png")
 
 skip_substrs = sys.argv[1:]
 
-all_seeds = set()
-all_column_ids = set()
 all_pics = list()
 columnid_to_modelname = dict()
 columnid_to_prompt = dict()
@@ -43,7 +41,6 @@ for dirname in os.listdir("."):
     columnid_to_sampler[column_id] = sampler
     print(f"model_name {model_name}, prompt '{prompt}', sampler {sampler}, column_id {column_id}", file=sys.stderr)
 
-    all_column_ids.add(column_id)
     for short_filename in os.listdir(dirname):
         filename = f"{dirname}/{short_filename}"
         if os.path.isdir(filename):
@@ -64,8 +61,15 @@ for dirname in os.listdir("."):
         
         seed = int(seed)
 
-        all_seeds.add(seed)
         all_pics.append(Picture(model_name, prompt, sampler, column_id, seed, filename))
+
+all_column_ids = sorted(list(set([pic.column_id for pic in all_pics])))
+all_seeds = sorted(list(set([int(pic.seed) for pic in all_pics])))
+all_model_names = sorted(list(set([pic.model_name for pic in all_pics])))
+all_prompts = sorted(list(set([pic.prompt for pic in all_pics])))
+all_samplers = sorted(list(set([pic.sampler for pic in all_pics])))
+columnid_to_gridcol = {column_id : idx + 2 for idx, column_id in enumerate(all_column_ids)}
+seed_to_gridrow = {seed: idx + 5 for idx, seed in enumerate(all_seeds)}
 
 # def numeric_sort(a, b):
 #     def _end_digits(s:str):
@@ -78,11 +82,6 @@ for dirname in os.listdir("."):
 #     bi = _end_digits(b)
 #     if 
 
-all_seeds = sorted(list(all_seeds))
-all_column_ids = sorted(list(all_column_ids))
-columnid_to_gridcol = {column_id : idx + 2 for idx, column_id in enumerate(all_column_ids)}
-
-seed_to_gridrow = {seed: idx + 2 for idx, seed in enumerate(all_seeds)}
 
 contents_css_generated = ""
 for column_id in all_column_ids:
@@ -118,20 +117,26 @@ for seed in all_seeds:
   <label for="{checkbox_id}" style="grid-row: {grid_row}; grid-column: 1">{seed}</label>
   <input type="checkbox" id="{checkbox_id}" style="grid-row: {grid_row}; grid-column: 1"/>""")
 
+for prompt_idx, prompt in enumerate(all_prompts):
+    width = len(all_model_names) * len(all_samplers)
+    prompt_start = prompt_idx * width + 2
+    prompt_end = prompt_start + width
+    print(f"""<span class="header-prompt" style="grid-column-start: {prompt_start}; grid-column-end: {prompt_end}">{prompt}</span>""")
+
+    for model_idx, model_name in enumerate(all_model_names):
+        model_start = prompt_start + model_idx * len(all_samplers)
+        model_end = model_start + len(all_samplers)
+        print(f"""<span class="header-model-name" style="grid-column-start: {model_start}; grid-column-end: {model_end}">{model_name}</span>""")
+
+        for sampler_idx, sampler in enumerate(all_samplers):
+            sampler_col = model_start + sampler_idx
+            print(f"""<span class="header-sampler" style="grid-column: {sampler_col}">{sampler}</span>""")
+
 for column_id in all_column_ids:
     grid_col = columnid_to_gridcol[column_id]
     css_cls = f"col_{grid_col}"
     checkbox_id = f"checkbox_{css_cls}"
-    print(f"""
-  <label for="{checkbox_id}" style="grid-row: 1; grid-column: {grid_col}">
-    <ul>
-      <li>model {columnid_to_modelname[column_id]}</li>
-      <li>prompt {columnid_to_prompt[column_id]}</li>
-      <li>sampler {columnid_to_sampler[column_id]}</li>
-    </ul>
-  </label>
-  <input type="checkbox" id="{checkbox_id}" style="grid-row: 1; grid-column: {grid_col}"/>
-""")
+    print(f"""<input type="checkbox" id="{checkbox_id}" style="grid-column: {grid_col}" class="header-checkbox"/>""")
 
 for idx, pic in enumerate(all_pics):
     row = seed_to_gridrow[pic.seed]
