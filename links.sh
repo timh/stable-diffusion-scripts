@@ -13,7 +13,7 @@ do(
     true
   else
     MODEL_PATH=$OUTPUT_DIR/$steps
-    CHECKPOINT_PATH=${OUTPUT_DIR}_${steps}.ckpt
+    CHECKPOINT_PATH=${OUTPUT_DIR}_`printf %05d $steps`.ckpt
     if [ -f "$CHECKPOINT_PATH" ]
     then
       echo "$CHECKPOINT_PATH already exists, skipping..."
