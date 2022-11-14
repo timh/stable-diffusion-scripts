@@ -63,7 +63,7 @@ for dirname in os.listdir("."):
 
         all_pics.append(Picture(model_name, prompt, sampler, column_id, seed, filename))
 
-all_pics = sorted(key=lambda pic: pic.column_id)
+all_pics = sorted(all_pics, key=lambda pic: pic.column_id)
 all_column_ids = sorted(list(set([pic.column_id for pic in all_pics])))
 all_seeds = sorted(list(set([int(pic.seed) for pic in all_pics])))
 all_model_names = sorted(list(set([pic.model_name for pic in all_pics])))
