@@ -1,4 +1,5 @@
 import os, os.path
+import sys
 import argparse
 import subprocess
 from typing import List
@@ -134,7 +135,7 @@ class Config(argparse.Namespace):
         print(f"              args: {' '.join(args)}")
 
         if not self.dry_run:
-            res = subprocess.run(args, capture_output=True, check=True)
+            res = subprocess.run(args, stdout=sys.stdout, stderr=sys.stderr, check=True)
             print(res.stdout)
 
         if prior_steps != 0:
@@ -144,7 +145,7 @@ class Config(argparse.Namespace):
                 args = ["mv", src, dest]
 
                 print(f"run_one: prior steps: moving {src} to {dest}")
-                res = subprocess.run(args, capture_output=True, check=True)
+                res = subprocess.run(args, stdout=sys.stdout, stderr=sys.stderr, check=True)
                 if res.stdout:
                     print(str(res.capture_output, "utf-8"))
     def run(self):
