@@ -115,15 +115,16 @@ class Config(argparse.Namespace):
                          "--not_cache_latents",
                          "--hflip"])
 
-        # write the config we used for this         
-        for steps in range(self.save_interval, max_train_steps+1, self.save_interval):
-            dirname = f"{output_dir}/{steps}"
-            filename = f"{dirname}/train-cmdline.txt"
-            os.makedirs(dirname, exist_ok=True)
-            with open(filename, "w") as output:
-                output.write(f"{' '.join(args)}\n")
-                output.write(f"# --max_train_steps: {self.max_train_steps}\n")
-                output.write(f"# --output_root: {self.output_root}\n")
+        # write the config we used for this
+        if not self.dry_run:    
+            for steps in range(self.save_interval, max_train_steps+1, self.save_interval):
+                dirname = f"{output_dir}/{steps}"
+                filename = f"{dirname}/train-cmdline.txt"
+                os.makedirs(dirname, exist_ok=True)
+                with open(filename, "w") as output:
+                    output.write(f"{' '.join(args)}\n")
+                    output.write(f"# --max_train_steps: {self.max_train_steps}\n")
+                    output.write(f"# --output_root: {self.output_root}\n")
         
         print(f"run_one:")
         print(f"       output_dir: {output_dir}")
@@ -145,9 +146,10 @@ class Config(argparse.Namespace):
                 args = ["mv", src, dest]
 
                 print(f"run_one: prior steps: moving {src} to {dest}")
-                res = subprocess.run(args, stdout=sys.stdout, stderr=sys.stderr, check=True)
-                if res.stdout:
-                    print(str(res.capture_output, "utf-8"))
+                if not self.dry_run:
+                    res = subprocess.run(args, stdout=sys.stdout, stderr=sys.stderr, check=True)
+                    if res.stdout:
+                        print(str(res.capture_output, "utf-8"))
     def run(self):
         for seed in self.seeds.split(","):
             self.run_one(seed)
