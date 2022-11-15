@@ -4,7 +4,7 @@ import sys, os, os.path
 import re
 from collections import namedtuple, defaultdict
 
-Picture = namedtuple("Picture", "model_name,prompt,sampler,column_id,seed,filename")
+Picture = namedtuple("Picture", "model_name,prompt,sampler,seed,filename")
 
 #re_dirname = re.compile(r".*(\d+).*$")
 #alex34_06500-photo of alexhin person, full body, pencil sketch-k_heun_50
@@ -35,11 +35,7 @@ for dirname in os.listdir("."):
     sampler = match.group(3)
     
     #prompt_safe = prompt.replace(" ", "_").replace(",", "-").replace("+","P")
-    column_id = f"{prompt}-{model_name}-{sampler}"
-    columnid_to_modelname[column_id] = model_name
-    columnid_to_prompt[column_id] = prompt
-    columnid_to_sampler[column_id] = sampler
-    print(f"model_name {model_name}, prompt '{prompt}', sampler {sampler}, column_id {column_id}", file=sys.stderr)
+    print(f"model_name {model_name}, prompt '{prompt}', sampler {sampler}", file=sys.stderr)
 
     for short_filename in os.listdir(dirname):
         filename = f"{dirname}/{short_filename}"
@@ -61,16 +57,23 @@ for dirname in os.listdir("."):
         
         seed = int(seed)
 
-        all_pics.append(Picture(model_name, prompt, sampler, column_id, seed, filename))
+        all_pics.append(Picture(model_name, prompt, sampler, seed, filename))
 
-all_pics = sorted(all_pics, key=lambda pic: pic.column_id)
-all_column_ids = sorted(list(set([pic.column_id for pic in all_pics])))
 all_seeds = sorted(list(set([int(pic.seed) for pic in all_pics])))
 all_model_names = sorted(list(set([pic.model_name for pic in all_pics])))
 all_prompts = sorted(list(set([pic.prompt for pic in all_pics])))
 all_samplers = sorted(list(set([pic.sampler for pic in all_pics])))
-columnid_to_gridcol = {column_id : idx + 2 for idx, column_id in enumerate(all_column_ids)}
 seed_to_gridrow = {seed: idx + 5 for idx, seed in enumerate(all_seeds)}
+
+idx_for_model_name = {model_name: idx for idx, model_name in enumerate(all_model_names)}
+idx_for_prompt = {prompt: idx for idx, prompt in enumerate(all_prompts)}
+idx_for_sampler = {sampler: idx for idx, sampler in enumerate(all_samplers)}
+
+def gridcol_for(model_name, prompt, sampler):
+    res = idx_for_prompt[prompt] * len(all_model_names) * len(all_samplers)
+    res += idx_for_model_name[model_name] * len(all_samplers)
+    res += idx_for_sampler[sampler]
+    return res + 2
 
 # def numeric_sort(a, b):
 #     def _end_digits(s:str):
@@ -85,11 +88,13 @@ seed_to_gridrow = {seed: idx + 5 for idx, seed in enumerate(all_seeds)}
 
 
 contents_css_generated = ""
-for column_id in all_column_ids:
-    grid_col = columnid_to_gridcol[column_id]
-    css_cls = f"col_{grid_col}"
-    contents_css_generated += f".{css_cls} {{ display: block; grid-column: {grid_col}; }}\n"
-    contents_css_generated += f"#checkbox_{css_cls}:checked ~ .{css_cls} {{ visibility: hidden; }}\n"
+for prompt in all_prompts:
+    for model_name in all_model_names:
+        for sampler in all_samplers:
+            grid_col = gridcol_for(model_name, prompt, sampler)
+            css_cls = f"col_{grid_col}"
+            contents_css_generated += f".{css_cls} {{ display: block; grid-column: {grid_col}; }}\n"
+            contents_css_generated += f"#checkbox_{css_cls}:checked ~ .{css_cls} {{ visibility: hidden; }}\n"
 
 for seed in all_seeds:
     grid_row = seed_to_gridrow[seed]
@@ -133,15 +138,13 @@ for prompt_idx, prompt in enumerate(all_prompts):
             sampler_col = model_start + sampler_idx
             print(f"""<span class="header-sampler" style="grid-column: {sampler_col}">{sampler}</span>""")
 
-for column_id in all_column_ids:
-    grid_col = columnid_to_gridcol[column_id]
-    css_cls = f"col_{grid_col}"
-    checkbox_id = f"checkbox_{css_cls}"
-    print(f"""<input type="checkbox" id="{checkbox_id}" style="grid-column: {grid_col}" class="header-checkbox"/>""")
+            css_cls = f"col_{sampler_col}"
+            checkbox_id = f"checkbox_{css_cls}"
+            print(f"""<input type="checkbox" id="{checkbox_id}" style="grid-column: {sampler_col}" class="header-checkbox"/>""")
 
 for idx, pic in enumerate(all_pics):
     row = seed_to_gridrow[pic.seed]
-    grid_col = columnid_to_gridcol[pic.column_id]
+    grid_col = gridcol_for(pic.model_name, pic.prompt, pic.sampler)
     grid_row = seed_to_gridrow[pic.seed]
     css_cls = f"col_{grid_col} row_{grid_row}"
 
