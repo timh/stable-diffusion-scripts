@@ -99,7 +99,8 @@ class Config(argparse.Namespace):
                 filename = f"{dirname}/train-cmdline.txt"
                 os.makedirs(dirname, exist_ok=True)
                 with open(filename, "w") as output:
-                    output.write(f"{' '.join(args)}\n")
+                    output.write(f"# {' '.join(args)}\n")
+                    output.write(f"# {' '.join(sys.argv)}\n")
                     output.write(f"# --max_train_steps: {self.max_train_steps}\n")
                     output.write(f"# --output_root: {self.output_root}\n")
         

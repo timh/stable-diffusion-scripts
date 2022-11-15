@@ -20,6 +20,9 @@ do(
     else
       python ../../scripts/convert_diffusers_to_original_stable_diffusion.py --model_path $MODEL_PATH --checkpoint_path $CHECKPOINT_PATH
       echo "$CHECKPOINT_PATH created"
+
+      # add descriptive text file
+      zip -u $CHECKPOINT_PATH $MODEL_PATH/*.txt || true
     fi
     ln -sf "$CHECKPOINT_PATH" "$TOP/stable-diffusion-webui/models/Stable-diffusion/"
   fi
