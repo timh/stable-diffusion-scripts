@@ -76,9 +76,7 @@ class Config(argparse.Namespace):
                 "--mixed_precision=fp16"]
 
         if self.inpainting:
-            args.extend(["--save_infer_steps=35", 
-                         "--not_cache_latents",
-                         "--hflip"])
+            args.append("--save_infer_steps=50")
 
         print(f"run_one:")
         print(f"       output_dir: {output_dir}")
