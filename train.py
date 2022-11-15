@@ -90,6 +90,7 @@ class Config(argparse.Namespace):
                 "--output_dir", output_dir,
                 "--instance_data_dir", self.instance_dir,
                 "--instance_prompt", self.instance_prompt,
+                "--class_data_dir", self.class_dir,
                 "--class_prompt", self.class_prompt,
                 "--learning_rate", str(self.learning_rate),
                 "--save_interval", str(self.save_interval),
