@@ -133,8 +133,9 @@ class Config(argparse.Namespace):
         print(f"      class_prompt: {self.class_prompt}")
         print(f"              args: {' '.join(args)}")
 
-        # res = subprocess.run(args, capture_output=True, check=True)
-        # print(res.stdout)
+        if not self.dry_run:
+            res = subprocess.run(args, capture_output=True, check=True)
+            print(res.stdout)
 
         if prior_steps != 0:
             for steps in range(self.save_interval, max_train_steps+1, self.save_interval):
@@ -147,7 +148,7 @@ class Config(argparse.Namespace):
                 if res.stdout:
                     print(str(res.capture_output, "utf-8"))
     def run(self):
-        for seed in self.seeds:
+        for seed in self.seeds.split(","):
             self.run_one(seed)
 
 
@@ -162,8 +163,9 @@ def parse_args() -> Config:
     parser.add_argument("--learning_rate", type=str, default="2e-6", help="learning rate")
     parser.add_argument("--seeds", type=str, default="1", help="random seeds (comma separated for multiple)")
     parser.add_argument("--max_train_steps", type=int, required=True, default=2000, help="number of training steps")
-    parser.add_argument("--inpainting", type=bool, help="start with inpainting instead of normal model")
+    parser.add_argument("--inpainting", type=bool, default=False, help="start with inpainting instead of normal model")
     parser.add_argument("--save_interval", type=int, default=1000, help="save every <N> steps")
+    parser.add_argument("--dry_run", type=bool, default=False, help="dry run: don't do actions")
 
     cfg = Config()
     args = parser.parse_args(None, namespace=cfg)
