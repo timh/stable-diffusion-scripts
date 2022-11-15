@@ -58,6 +58,7 @@ class Config(argparse.Namespace):
                 "--class_prompt", self.class_prompt,
                 "--learning_rate", str(self.learning_rate),
                 "--save_interval", str(self.save_interval),
+                "--save_infer_steps=50",
                 "--seed", str(seed),
                 "--pretrained_model_name_or_path", input_model_name,
                 "--pretrained_vae_name_or_path=stabilityai/sd-vae-ft-mse",
@@ -76,7 +77,7 @@ class Config(argparse.Namespace):
                 "--mixed_precision=fp16"]
 
         if self.inpainting:
-            args.append("--save_infer_steps=50")
+            args.append("--not_cache_latents")
 
         print(f"run_one:")
         print(f"       output_dir: {output_dir}")
