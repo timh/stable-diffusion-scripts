@@ -22,6 +22,17 @@ def generate_css():
         contents_css_generated += f".{css_cls} {{ display: block; grid-row: {grid_row}; }}\n"
         contents_css_generated += f"#checkbox_{css_cls}:checked ~ .{css_cls} {{ visibility: hidden; }}\n"
 
+    def print_all_objs(prefix, all_objs):
+        res = ""
+        for idx, obj in enumerate(all_objs):
+            css_cls = f"{prefix}_{idx}"
+            checkbox_id = f"checkbox_{css_cls}"
+            res += f"#{checkbox_id}:checked ~ .{css_cls} {{ visibility: hidden; }}\n"
+        return res
+    contents_css_generated += print_all_objs("prompt", all_prompts)
+    contents_css_generated += print_all_objs("model", all_model_names)
+    contents_css_generated += print_all_objs("sampler", all_samplers)
+
     return contents_css_generated
 
 def find_pngs():
@@ -76,7 +87,8 @@ if __name__ == "__main__":
     all_model_names = sorted(list(set([pic.model_name for pic in all_pics])))
     all_prompts = sorted(list(set([pic.prompt for pic in all_pics])))
     all_samplers = sorted(list(set([pic.sampler for pic in all_pics])))
-    seed_to_gridrow = {seed: idx + 5 for idx, seed in enumerate(all_seeds)}
+    seed_to_gridrow = {seed: idx + 8 for idx, seed in enumerate(all_seeds)}
+    max_pics = len(all_prompts) * len(all_model_names) * len(all_samplers)
 
     idx_for_model_name = {model_name: idx for idx, model_name in enumerate(all_model_names)}
     idx_for_prompt = {prompt: idx for idx, prompt in enumerate(all_prompts)}
@@ -100,6 +112,18 @@ if __name__ == "__main__":
 
     print("<body>")
     print("<div class=\"grid_container\">")
+
+    def print_all_objs(prefix, all_objs, grid_row):
+        for idx, obj in enumerate(all_objs):
+            css_cls = f"{prefix}_{idx}"
+            checkbox_id = f"checkbox_{css_cls}"
+            style = f"grid-row: {grid_row}"
+            print(f"""<label for="{checkbox_id}" style="{style}">{obj}</label>""")
+            print(f"""<input type="checkbox" id="{checkbox_id}" style="{style}"/>""")
+    print_all_objs("prompt", all_prompts, 1)
+    print_all_objs("model", all_model_names, 2)
+    print_all_objs("sampler", all_samplers, 3)
+
     for seed in all_seeds:
         grid_row = seed_to_gridrow[seed]
         css_cls = f"row_{grid_row}"
@@ -112,20 +136,23 @@ if __name__ == "__main__":
         width = len(all_model_names) * len(all_samplers)
         prompt_start = prompt_idx * width + 2
         prompt_end = prompt_start + width
-        print(f"""<span class="header-prompt" style="grid-column-start: {prompt_start}; grid-column-end: {prompt_end}">{prompt}</span>""")
+        prompt_css_cls = f"prompt_{prompt_idx}"
+        print(f"""<span class="header-prompt {prompt_css_cls}" style="grid-column-start: {prompt_start}; grid-column-end: {prompt_end}">{prompt}</span>""")
 
         for model_idx, model_name in enumerate(all_model_names):
             model_start = prompt_start + model_idx * len(all_samplers)
             model_end = model_start + len(all_samplers)
-            print(f"""<span class="header-model-name" style="grid-column-start: {model_start}; grid-column-end: {model_end}">{model_name}</span>""")
+            model_css_cls = f"model_{model_idx}"
+            print(f"""<span class="header-model-name {prompt_css_cls} {model_css_cls}" style="grid-column-start: {model_start}; grid-column-end: {model_end}">{model_name}</span>""")
 
             for sampler_idx, sampler in enumerate(all_samplers):
                 sampler_col = model_start + sampler_idx
-                print(f"""<span class="header-sampler" style="grid-column: {sampler_col}">{sampler}</span>""")
+                sampler_css_cls = f"sampler_{sampler_idx}"
+                print(f"""<span class="header-sampler {prompt_css_cls} {model_css_cls} {sampler_css_cls}" style="grid-column: {sampler_col}">{sampler}</span>""")
 
                 css_cls = f"col_{sampler_col}"
                 checkbox_id = f"checkbox_{css_cls}"
-                print(f"""<input type="checkbox" id="{checkbox_id}" style="grid-column: {sampler_col}" class="header-checkbox"/>""")
+                print(f"""<input type="checkbox" id="{checkbox_id}" style="grid-column: {sampler_col}" class="header-checkbox {prompt_css_cls} {model_css_cls} {sampler_css_cls}"/>""")
 
     for idx, pic in enumerate(all_pics):
         row = seed_to_gridrow[pic.seed]
@@ -133,8 +160,12 @@ if __name__ == "__main__":
         grid_row = seed_to_gridrow[pic.seed]
         css_cls = f"col_{grid_col} row_{grid_row}"
 
+        css_cls += f" prompt_{idx_for_prompt[pic.prompt]}"
+        css_cls += f" model_{idx_for_model_name[pic.model_name]}"
+        css_cls += f" sampler_{idx_for_sampler[pic.sampler]}"
+
         print(f"""
-    <span class="{css_cls} tooltip"">
+    <span class="tooltip {css_cls}"">
     <span class="tooltiptext">
         <ul>
             <li>model_name {pic.model_name}</li>

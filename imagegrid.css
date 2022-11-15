@@ -3,6 +3,7 @@
   display: grid;
   column-gap: 2px;
   row-gap: 2px;
+  grid-auto-flow: column;
 }
 
 /* STOLEN FROM https://www.w3schools.com/css/css_tooltip.asp */
@@ -32,23 +33,23 @@
 .header-prompt {
   font-family: Arial, Helvetica, sans-serif;
   color: green;
-  grid-row: 1;
+  grid-row: 4;
 }
 
 .header-model-name {
   font-family: Arial, Helvetica, sans-serif;
   color: blue;
-  grid-row: 2;
+  grid-row: 5;
 }
 
 .header-sampler {
   font-family: Arial, Helvetica, sans-serif;
   color: black;
-  grid-row: 3;
+  grid-row: 6;
 }
 
 .header-checkbox {
-  grid-row: 4;
+  grid-row: 7;
 }
 
 img {
