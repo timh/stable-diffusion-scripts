@@ -1,4 +1,8 @@
 
+input[type=checkbox] {
+  visibility: hidden;
+}
+
 .grid_container {
   display: grid;
   column-gap: 2px;

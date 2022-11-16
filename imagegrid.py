@@ -37,7 +37,7 @@ def generate_css():
 
 def find_pngs():
     #alex34_06500-photo of alexhin person, full body, pencil sketch-k_heun_50
-    re_dirname = re.compile(r"(.+[\d_]+)-(.+)-([\w_]+_\d+)")
+    re_dirname = re.compile(r"(.+[\d_]+)-(.+)-([\w_]+_\d+( [c\d]+)?)")
     re_png_invokeai = re.compile(r"(\d+).(\d+)\.png")
 
     all_pics = list()
@@ -119,12 +119,18 @@ if __name__ == "__main__":
     print("<div class=\"grid_container\">")
 
     def print_all_objs(prefix, all_objs, grid_row):
+        style = f"grid-row: {grid_row}; grid-column-start: 1; grid-column-end: {max_pics + 2}"
+        inside_span = f"""<span style="{style}">"""
+        outside_span = ""
         for idx, obj in enumerate(all_objs):
             css_cls = f"{prefix}_{idx}"
             checkbox_id = f"checkbox_{css_cls}"
-            style = f"grid-row: {grid_row}"
-            print(f"""<label for="{checkbox_id}" style="{style}">{obj}</label>""")
-            print(f"""<input type="checkbox" id="{checkbox_id}" style="{style}"/>""")
+            inside_span += f"""  <label for="{checkbox_id}" style="margin-right: 20px">{obj}</label>"""
+            outside_span += f"""  <input type="checkbox" id="{checkbox_id}" style="{style}"/>"""
+        inside_span += "</span>"
+        print(inside_span)
+        print(outside_span)
+
     print_all_objs("prompt", all_prompts, 1)
     print_all_objs("model", all_model_names, 2)
     print_all_objs("sampler", all_samplers, 3)
