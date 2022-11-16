@@ -1,0 +1,8 @@
+--instance_dir
+/workspace/images.alex-20
+--instance_prompt
+a photo of alexhin person
+--class_dir
+/workspace/class_images/person_ddim
+--class_prompt
+a photo of person

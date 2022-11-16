@@ -13,11 +13,6 @@ class Config(argparse.Namespace):
         if not os.path.isdir(self.instance_dir):
             raise Exception(f"instance_dir {self.instance_dir} doesn't exist")
 
-        if self.inpainting:
-            self.input_model_name = "runwayml/stable-diffusion-inpainting"
-        else:
-            self.input_model_name = "runwayml/stable-diffusion-v1-5"
-        
     def _output_dir(self, seed:int) -> str:
         return f"{self.output_root}/{self.name}_r{seed}"
 
@@ -49,7 +44,7 @@ class Config(argparse.Namespace):
             print(f"** nothing to do, max_train_steps is {max_train_steps}")
             return
 
-        train_py:str = "train_inpainting_dreambooth.py" if self.inpainting else "train_dreambooth.py"
+        train_py:str = "train_inpainting_dreambooth.py" if "inpainting" in self.input_model_name else "train_dreambooth.py"
         args = ["accelerate", "launch", train_py,
                 "--output_dir", output_dir,
                 "--instance_data_dir", self.instance_dir,
@@ -76,7 +71,7 @@ class Config(argparse.Namespace):
                 "--max_train_steps", str(max_train_steps),
                 "--mixed_precision=fp16"]
 
-        if self.inpainting:
+        if "inpainting" in self.input_model_name:
             args.append("--not_cache_latents")
 
         print(f"run_one:")
@@ -120,19 +115,20 @@ class Config(argparse.Namespace):
 
 
 def parse_args() -> Config:
-    parser = argparse.ArgumentParser(description="training wrapper for dreambooth")
-    parser.add_argument("--output_root", type=str, default="/workspace/outputs", help="Path to root of output directory")
-    parser.add_argument("--name", type=str, required=True, help="name of model to train, e.g., alexhin20")
-    parser.add_argument("--class_dir", type=str, default="/workspace/class.white-woman", help="class training images directory")
-    parser.add_argument("--class_prompt", type=str, default="photo of white woman", help="class prompt")
-    parser.add_argument("--instance_dir", type=str, default="/workspace/images.alex-24", help="instance images directory")
-    parser.add_argument("--instance_prompt", type=str, default="photo of alexhin", help="instance prompt")
-    parser.add_argument("--learning_rate", type=str, default="2e-6", help="learning rate")
-    parser.add_argument("--seeds", type=str, default="1", help="random seeds (comma separated for multiple)")
-    parser.add_argument("--max_train_steps", type=int, required=True, default=2000, help="number of training steps")
-    parser.add_argument("--inpainting", type=bool, default=False, help="start with inpainting instead of normal model")
+    parser = argparse.ArgumentParser(description="training wrapper for dreambooth", fromfile_prefix_chars="@")
+    parser.add_argument("--output_root", default="/workspace/outputs", help="Path to root of output directory")
+    parser.add_argument("--name", "-n", required=True, help="name of model to train, e.g., alexhin20")
+    parser.add_argument("--class_dir", default="/workspace/class.white-woman", help="class training images directory")
+    parser.add_argument("--class_prompt", default="photo of white woman", help="class prompt")
+    parser.add_argument("--instance_dir", default="/workspace/images.alex-24", help="instance images directory")
+    parser.add_argument("--instance_prompt", default="photo of alexhin", help="instance prompt")
+    parser.add_argument("--learning_rate", "--lr", "-l", default="2e-6", help="learning rate")
+    parser.add_argument("--seeds", "-S", default="1", help="random seeds (comma separated for multiple)")
+    parser.add_argument("--steps", "-s", dest='max_train_steps', type=int, required=True, default=2000, help="number of training steps")
+    parser.add_argument("--model", dest='input_model_name', default="runwayml/stable-diffusion-v1-5", help="name or path for base model")
     parser.add_argument("--save_interval", type=int, default=1000, help="save every <N> steps")
-    parser.add_argument("--dry_run", type=bool, default=False, help="dry run: don't do actions")
+    parser.add_argument("--train_batch_size", type=int, default=1, help="train batch size")
+    parser.add_argument("--dry_run", default=False, help="dry run: don't do actions", action='store_true')
 
     cfg = Config()
     args = parser.parse_args(None, namespace=cfg)
