@@ -2,97 +2,97 @@ import os
 import os.path
 import re
 import subprocess
+import argparse
+from collections import namedtuple
+from typing import List
 
-# General rendering:
-#   --prompt PROMPT       prompt string
-#   -s STEPS, --steps STEPS
-#                         Number of steps
-#   -S SEED, --seed SEED  Image seed; a +ve integer, or use -1 for the previous seed, -2 for the one before that, etc
-#   -n ITERATIONS, --iterations ITERATIONS
-#                         Number of samplings to perform (slower, but will provide seeds for individual images)
-#   -W WIDTH, --width WIDTH
-#                         Image width, multiple of 64
-#   -H HEIGHT, --height HEIGHT
-#                         Image height, multiple of 64
-#   -C CFG_SCALE, --cfg_scale CFG_SCALE
-#                         Classifier free guidance (CFG) scale - higher numbers cause generator to "try" harder.
+# ddim, k_dpm_2_a, k_dpm_2, k_euler_a, k_euler, k_heun, k_lms, plms
 
-def gen_one_set(model_name:str, sampler_str:str, prompt:str, base_seed:int, num_imgs:int):
-    sampler, sampler_steps = sampler_str.split(":")
-    sampler_steps = int(sampler_steps)
-    print(f"gen_one: model {model_name}, sampler {sampler}, steps {sampler_steps}, prompt \"{prompt}\", base_seed {base_seed}, num_imgs {num_imgs}")
+OneRender = namedtuple('OneRender', 'model,prompt,sampler_type,sampler_steps,cfg,seed')
 
-    sampler_tag = f"{sampler}_{sampler_steps}"
-    # prompt_str = prompt.replace(" ", "_")
-    prompt_str = prompt
-    outdir = f"outputs/{model_name}-{prompt_str}-{sampler_tag}"
-    if os.path.isdir(outdir):
-        print(f"skipping {outdir}")
-        return
-    
-    cmd = [
-        "python", "scripts/invoke.py",
-        "--outdir", outdir,
-        "--sampler", sampler,
-        "--model", model_name,
-        "--from_file", "-"
-    ]
+# generator for combinatorial set of images to generate
+def gen_renders(config: argparse.Namespace):
+    for model in config.models:
+        for prompt in config.prompts:
+            for sampler in config.samplers:
+                sampler_type, sampler_steps = sampler.split(":")
+                for cfg in config.cfgs:
+                    for idx in range(config.num_images):
+                        seed = config.base_seed + idx
+                        one = OneRender(model=model, prompt=prompt, sampler_type=sampler_type, sampler_steps=sampler_steps, cfg=cfg, seed=seed)
+                        yield one
 
-    print(f"RUN: {cmd}")
-    proc = subprocess.Popen(cmd, close_fds=True, stdin=subprocess.PIPE)
-    if True:
-        print("subproc")
-        seed = base_seed
-        for i in range(num_imgs):
-            img_cmd = f"{prompt} -s {sampler_steps} -C 12 -S {seed}\n"
-            print(f"  write: {img_cmd}")
+def gen(config: argparse.Namespace):
+    last_model: str = None
+    last_cmd: List[str] = None
+    proc: subprocess.Popen = None
+
+    def close_proc(last_cmd: List[str], proc: subprocess.Popen):
+        if proc is not None:
+            proc.stdin.close()
+            ret = proc.wait()
+            if ret != 0:
+                raise Exception(f"{' '.join(last_cmd)} returned {ret}")
+
+    for one in gen_renders(config):
+        if last_model is None or last_model != one.model:
+            close_proc(last_cmd, proc)
+            cmd = [
+                "python", "scripts/invoke.py",
+                "--model", one.model,
+                "--from_file", "-"
+            ]
+            print(f"RUN: {' '.join(cmd)}")
+            if not config.dry_run:
+                proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+            last_model = one.model
+            last_cmd = cmd
+
+        sampler_tag = f"{one.sampler_type}_{one.sampler_steps}"
+        outdir = f"outputs/{one.model}-{one.prompt}-{sampler_tag}_c{one.cfg}"
+        if os.path.isdir(outdir):
+            print(f"\"{outdir}\" already exists, skipping.")
+            continue
+
+        prompt = one.prompt
+        if one.model in ["alexhin20_1e6_3500", "alex20_03500"]:
+            prompt = prompt.replace("alexhin", "alexhin person")
+        img_cmd = (f"{prompt} "
+                   f"--sampler {one.sampler_type} --steps {one.sampler_steps} "
+                   f"--cfg_scale {one.cfg} "
+                   f"--seed {one.seed} "
+                   f"--outdir \"{outdir}\"\n")
+        print(f"img_cmd: {img_cmd}", end="")
+        if not config.dry_run:
             proc.stdin.write(bytes(img_cmd, "utf-8"))
-            seed = seed + 1
-        proc.stdin.close()
-        ret = proc.wait()
-        if ret != 0:
-            raise Exception(f"{cmd} returned {ret}")
-
-def gen(model_names, sampler_strings, prompts, base_seed, num_imgs):
-    if isinstance(model_names, list):
-        for model_name in model_names:
-            gen(model_name, sampler_strings, prompts, base_seed, num_imgs)
-        return
-
-    if isinstance(prompts, list):
-        for prompt in prompts:
-            gen(model_names, sampler_strings, prompt, base_seed, num_imgs)
-        return
-
-    if isinstance(sampler_strings, list):
-        for sampler_str in sampler_strings:
-            gen(model_names, sampler_str, prompts, base_seed, num_imgs)
-        return
     
-    gen_one_set(model_names, sampler_strings, prompts, base_seed, num_imgs)
-    
+    close_proc(last_cmd, proc)
 
-#ddim, k_dpm_2_a, k_dpm_2, k_euler_a, k_euler, k_heun, k_lms, plms
-#samplers = ["ddim:50", "k_dpm_2:50"]
-#samplers = ["k_dpm_2:20", "k_dpm_2:50", "k_euler:20", "k_euler:50", "k_euler_a:20", "k_euler_a:50"]
-samplers = ["k_dpm_2:20"]
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="gen many sample images", fromfile_prefix_chars="@")
+    parser.add_argument("-p", "--prompt", dest='prompts', nargs='+', action='append', required=True)
+    parser.add_argument("-m", "--model", dest='models', nargs='+', action='append', required=True)
+    parser.add_argument("-s", "--sampler", dest='samplers', nargs='+', action='append')
+    parser.add_argument("-n", "--num", dest='num_images', type=int, default=10, help="num images")
+    parser.add_argument("--seed", dest='base_seed', type=int, default=0)
+    parser.add_argument("--cfg", dest='cfgs', nargs='+', action='append', help="CFG")
+    parser.add_argument("--dry-run", action='store_true')
 
-#models = "alex20_03500 alex20_06000 alex34_03500 alex34_04000 alex34_04500 alex34_05000 alex34_05500 alex34_06000 alex34_06500 alex34_07000 alex34_07500 alex34_08000".split(" ")
-#models = "alex34_04000 alex34_04500 alex34_05000 alex34_05500 alex34_06500 alex34_07500".split(" ")
-#models = "alex20_03500 alex34_03500 alex34_04000 alex34_05000 alex34_06000 alex34_06500".split(" ")
-#models = "alex20_03500"
-# models = (#[f"alexhin20-inpainting2_{num:05}" for num in range(3000, 19000+1, 4000)] +
-#           [f"alexhin20-inpainting3_{num:05}" for num in range(1000, 16000+1, 1000)])
-models = ("alexhin24-inpainting_05_1000 alexhin24-inpainting_05_1500 alexhin24-inpainting_05_2000 " +
-          "alexhin24-inpainting_10_1000 alexhin24-inpainting_10_1500 alexhin24-inpainting_10_2000").split(" ")
+    config = parser.parse_args()
+    if config.cfgs is None:
+        config.cfgs = [["10"]]
+    if config.samplers is None:
+        config.samplers = [["ddim:30"]]
 
-base_seed = 0
-num_imgs = 20
-# for alexhin20-inpainting2
-# prompts = [ "portrait of alexhin woman, dramatic lighting, tone mapped, elegant, digital painting, artstation, smooth, sharp focus",
-#             "portrait of alexhin woman, pencil sketch" ]
-# for alexhin20-inpainting3
-prompts = [ "portrait of alexhin person, dramatic lighting, tone mapped, elegant, digital painting, artstation, smooth, sharp focus",
-            "portrait of alexhin person, pencil sketch" ]
+    config.prompts = [inside for outside in config.prompts for inside in outside]
+    config.models = [inside for outside in config.models for inside in outside]
+    config.samplers = [inside for outside in config.samplers for inside in outside]
+    config.cfgs = [inside for outside in config.cfgs for inside in outside]
 
-gen(models, samplers, prompts, base_seed, num_imgs)
+    print(f"config = {config}")
+    return config
+
+
+if __name__ == "__main__":
+    config = parse_args()
+    gen(config)
