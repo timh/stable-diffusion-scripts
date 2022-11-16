@@ -122,11 +122,11 @@ def parse_args() -> Config:
     parser.add_argument("--class_prompt", default="photo of white woman", help="class prompt")
     parser.add_argument("--instance_dir", default="/workspace/images.alex-24", help="instance images directory")
     parser.add_argument("--instance_prompt", default="photo of alexhin", help="instance prompt")
-    parser.add_argument("--learning_rate", "--lr", "-l", default="2e-6", help="learning rate")
+    parser.add_argument("--learning_rate", "--lr", "-l", default="1e-6", help="learning rate")
     parser.add_argument("--seeds", "-S", default="1", help="random seeds (comma separated for multiple)")
     parser.add_argument("--steps", "-s", dest='max_train_steps', type=int, required=True, default=2000, help="number of training steps")
     parser.add_argument("--model", dest='input_model_name', default="runwayml/stable-diffusion-v1-5", help="name or path for base model")
-    parser.add_argument("--save_interval", type=int, default=1000, help="save every <N> steps")
+    parser.add_argument("--save_interval", type=int, default=500, help="save every <N> steps")
     parser.add_argument("--train_batch_size", type=int, default=1, help="train batch size")
     parser.add_argument("--dry_run", default=False, help="dry run: don't do actions", action='store_true')
 
