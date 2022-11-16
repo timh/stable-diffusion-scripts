@@ -40,8 +40,6 @@ def find_pngs():
     re_dirname = re.compile(r"(.+[\d_]+)-(.+)-([\w_]+_\d+)")
     re_png_invokeai = re.compile(r"(\d+).(\d+)\.png")
 
-    skip_substrs = sys.argv[1:]
-
     all_pics = list()
     for dirname in os.listdir("."):
         if not os.path.isdir(dirname):
@@ -50,8 +48,15 @@ def find_pngs():
         match = re_dirname.match(dirname)
         if not match:
             continue
+    
+        include = True
+        for arg in sys.argv[1:]:
+            if arg[0] == '-' and arg[1:] in dirname:
+                include = False
+            elif arg[0] == '+' and arg[1:] in dirname:
+                include = True
 
-        if any([skip in dirname for skip in skip_substrs]):
+        if not include:
             continue
 
         model_name = match.group(1)
