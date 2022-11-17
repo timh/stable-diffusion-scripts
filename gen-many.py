@@ -49,6 +49,7 @@ def gen(config: argparse.Namespace):
             close_proc(last_cmd, proc)
             cmd = [
                 "accelerate", "launch",
+                "--num_cpu_threads_per_process", "8",
                 "scripts/invoke.py",
                 "--model", one.model,
                 "--from_file", "-"

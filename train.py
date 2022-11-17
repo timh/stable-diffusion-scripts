@@ -45,7 +45,9 @@ class Config(argparse.Namespace):
             return
 
         train_py:str = "train_inpainting_dreambooth.py" if "inpainting" in self.input_model_name else "train_dreambooth.py"
-        args = ["accelerate", "launch", train_py,
+        args = ["accelerate", "launch",
+                "--num_cpu_threads_per_process", "8",
+                train_py,
                 "--output_dir", output_dir,
                 "--instance_data_dir", self.instance_dir,
                 "--instance_prompt", self.instance_prompt,
