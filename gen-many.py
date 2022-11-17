@@ -35,10 +35,18 @@ def gen(config: argparse.Namespace):
                 raise Exception(f"{' '.join(last_cmd)} returned {ret}")
 
     for one in gen_renders(config):
+        sampler_tag = f"{one.sampler_type}_{one.sampler_steps}"
+        outdir = f"outputs/{one.model}-{one.prompt}-{sampler_tag} c{one.cfg}"
+        if os.path.isdir(outdir):
+            # BUG: this will get emitted (num_images) times
+            print(f"\"{outdir}\" already exists, skipping.")
+            continue
+
         if last_model is None or last_model != one.model:
             close_proc(last_cmd, proc)
             cmd = [
-                "python", "scripts/invoke.py",
+                "accelerate", "launch",
+                "scripts/invoke.py",
                 "--model", one.model,
                 "--from_file", "-"
             ]
@@ -47,12 +55,6 @@ def gen(config: argparse.Namespace):
                 proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
             last_model = one.model
             last_cmd = cmd
-
-        sampler_tag = f"{one.sampler_type}_{one.sampler_steps}"
-        outdir = f"outputs/{one.model}-{one.prompt}-{sampler_tag} c{one.cfg}"
-        if os.path.isdir(outdir):
-            print(f"\"{outdir}\" already exists, skipping.")
-            continue
 
         prompt = one.prompt
         if one.model in ["alexhin20_1e6_3500", "alex20_03500"]:
