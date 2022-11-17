@@ -61,8 +61,8 @@ def gen(config: argparse.Namespace):
             last_cmd = cmd
 
         prompt = one.prompt
-        if one.model in ["alexhin20_1e6_3500", "alex20_03500"]:
-            prompt = prompt.replace("alexhin", "alexhin person")
+        # if one.model in ["alexhin20_1e6_3500", "alex20_03500"]:
+        #     prompt = prompt.replace("alexhin", "alexhin person")
         img_cmd = (f"{prompt} "
                    f"--sampler {one.sampler_type} --steps {one.sampler_steps} "
                    f"--cfg_scale {one.cfg} "
