@@ -41,6 +41,7 @@ def gen(config: argparse.Namespace):
         if os.path.isdir(outdir):
             if last_outdir != outdir:
                 print(f"\"{outdir}\" already exists, skipping.")
+            last_outdir = outdir
             continue
         last_outdir = outdir
 
