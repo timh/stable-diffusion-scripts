@@ -3,6 +3,20 @@ input[type=checkbox] {
   visibility: hidden;
 }
 
+.img_selected {
+  color: greenyellow;
+  background-color: black;
+  opacity: 50%;
+  position: absolute;
+  visibility: visible;
+  padding: 5px;
+}
+
+.img_unselected {
+  position: absolute;
+  visibility: hidden;
+}
+
 .grid_container {
   display: grid;
   column-gap: 2px;

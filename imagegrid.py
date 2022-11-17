@@ -78,6 +78,13 @@ def find_pngs():
                 continue
             seed = int(match.group(2))
 
+            if "alexhin person" in prompt:
+                prompt = prompt.replace("alexhin person", "alexhin (person)")
+            elif prompt.endswith("alexhin"):
+                prompt = prompt.replace("alexhin", "alexhin (person)")
+            else:
+                prompt = prompt.replace("alexhin,", "alexhin (person),")
+
             all_pics.append(Picture(model_name, prompt, sampler, seed, filename))
     
     return all_pics
@@ -105,10 +112,14 @@ if __name__ == "__main__":
         res += idx_for_sampler[sampler]
         return res + 2
 
-    contents_css_static = open(os.path.dirname(__file__) + "/imagegrid.css").read(10 * 1024)
+    contents_css_static = open(os.path.dirname(__file__) + "/imagegrid.css").read()
+    contents_js_static = open(os.path.dirname(__file__) + "/imagegrid.js").read()
     contents_css_generated = generate_css()
     print(f"""
     <head>
+    <script type="text/javascript">
+    {contents_js_static}
+    </script>
     <style type="text/css">
     {contents_css_static}
     {contents_css_generated}
@@ -175,6 +186,9 @@ if __name__ == "__main__":
         css_cls += f" model_{idx_for_model_name[pic.model_name]}"
         css_cls += f" sampler_{idx_for_sampler[pic.sampler]}"
 
+        check_id = f"check_{idx}"
+        args = f"'{pic.prompt}', '{pic.model_name}', '{pic.sampler}', '{check_id}'"
+
         print(f"""
     <span class="tooltip {css_cls}"">
     <span class="tooltiptext">
@@ -186,8 +200,10 @@ if __name__ == "__main__":
         </ul>
         <img src="{pic.filename}" />
     </span>
-    <img src="{pic.filename}" />
+    <span id="{check_id}" class="img_unselected">check</span>
+    <img src="{pic.filename}" onClick="mark({args})" />
     </span>""")
 
     print("</div>")
+    print("<div id=\"results\"></div>")
     print("</body>")
