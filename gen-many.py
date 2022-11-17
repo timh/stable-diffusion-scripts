@@ -67,8 +67,9 @@ def gen(config: argparse.Namespace):
                    f"--cfg_scale {one.cfg} "
                    f"--seed {one.seed} "
                    f"--outdir \"{outdir}\"\n")
-        print(f"img_cmd: {img_cmd}", end="")
-        if not config.dry_run:
+        if config.dry_run:
+            print(f"img_cmd: {img_cmd}", end="")
+        else:
             proc.stdin.write(bytes(img_cmd, "utf-8"))
     
     close_proc(last_cmd, proc)
