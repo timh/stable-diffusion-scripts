@@ -37,7 +37,7 @@ def gen(config: argparse.Namespace):
 
     for one in gen_renders(config):
         sampler_tag = f"{one.sampler_type}_{one.sampler_steps}"
-        outdir = f"outputs/{one.model}-{one.prompt}-{sampler_tag} c{one.cfg}"
+        outdir = f"outputs/{one.model}-{one.prompt}-{sampler_tag} c{one.cfg:02}"
         if os.path.isdir(outdir):
             if last_outdir != outdir:
                 print(f"\"{outdir}\" already exists, skipping.")
