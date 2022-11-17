@@ -25,6 +25,7 @@ def gen_renders(config: argparse.Namespace):
 def gen(config: argparse.Namespace):
     last_model: str = None
     last_cmd: List[str] = None
+    last_outdir: str = None
     proc: subprocess.Popen = None
 
     def close_proc(last_cmd: List[str], proc: subprocess.Popen):
@@ -38,9 +39,10 @@ def gen(config: argparse.Namespace):
         sampler_tag = f"{one.sampler_type}_{one.sampler_steps}"
         outdir = f"outputs/{one.model}-{one.prompt}-{sampler_tag} c{one.cfg}"
         if os.path.isdir(outdir):
-            # BUG: this will get emitted (num_images) times
-            print(f"\"{outdir}\" already exists, skipping.")
+            if last_outdir != outdir:
+                print(f"\"{outdir}\" already exists, skipping.")
             continue
+        last_outdir = outdir
 
         if last_model is None or last_model != one.model:
             close_proc(last_cmd, proc)
