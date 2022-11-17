@@ -94,7 +94,7 @@ def parse_args() -> argparse.Namespace:
     config.prompts = [inside for outside in config.prompts for inside in outside]
     config.models = [inside for outside in config.models for inside in outside]
     config.samplers = [inside for outside in config.samplers for inside in outside]
-    config.cfgs = [inside for outside in config.cfgs for inside in outside]
+    config.cfgs = [int(inside) for outside in config.cfgs for inside in outside]
 
     print(f"config = {config}")
     return config
