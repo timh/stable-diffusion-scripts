@@ -3,6 +3,7 @@ import os.path
 import re
 import subprocess
 import argparse
+import shlex
 from collections import namedtuple
 from typing import List
 
@@ -38,7 +39,7 @@ def gen(config: argparse.Namespace):
     for one in gen_renders(config):
         sampler_tag = f"{one.sampler_type}_{one.sampler_steps}"
         outdir = f"outputs/{one.model}-{one.prompt}-{sampler_tag} c{one.cfg:02}"
-        if os.path.isdir(outdir):
+        if os.path.isdir(outdir) and len(os.listdir(outdir)) > 0:
             if last_outdir != outdir:
                 print(f"\"{outdir}\" already exists, skipping.")
             last_outdir = outdir
@@ -75,8 +76,31 @@ def gen(config: argparse.Namespace):
     
     close_proc(last_cmd, proc)
 
+class LoadFromFile (argparse.Action):
+    def __call__ (self, parser, config, values, option_string = None):
+        with values as file:
+            import copy
+
+            old_actions = parser._actions
+            old_required = {a.dest : a.required for a in old_actions}
+            file_actions = copy.deepcopy(old_actions)
+
+            # make none of the args required so we can get thru reading the file in
+            # parser.parse_args, below.
+            for act in file_actions:
+                act.required = False
+
+            parser._actions = file_actions
+            parser.parse_args(shlex.split(file.read()), config)
+
+            # make any still-missing args required again, so we error out.
+            for act in file_actions:
+                if getattr(config, act.dest, None) is None:
+                    act.required = old_required[act.dest]
+            # parser._actions = old_actions
+
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="gen many sample images", fromfile_prefix_chars="@")
+    parser = argparse.ArgumentParser(description="gen many sample images")
     parser.add_argument("-p", "--prompt", dest='prompts', nargs='+', action='append', required=True)
     parser.add_argument("-m", "--model", dest='models', nargs='+', action='append', required=True)
     parser.add_argument("-s", "--sampler", dest='samplers', nargs='+', action='append')
@@ -84,6 +108,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", dest='base_seed', type=int, default=0)
     parser.add_argument("--cfg", dest='cfgs', nargs='+', action='append', help="CFG")
     parser.add_argument("--dry-run", action='store_true')
+    parser.add_argument("-f", "--filename", type=open, action=LoadFromFile)
 
     config = parser.parse_args()
     if config.cfgs is None:
