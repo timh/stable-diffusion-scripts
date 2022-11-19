@@ -121,7 +121,6 @@ def parse_args() -> argparse.Namespace:
     config.samplers = [inside for outside in config.samplers for inside in outside]
     config.cfgs = [int(inside) for outside in config.cfgs for inside in outside]
 
-    print(f"config = {config}")
     return config
 
 
