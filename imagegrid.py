@@ -4,14 +4,26 @@ import sys, os, os.path
 import re
 from collections import namedtuple, defaultdict
 
-Picture = namedtuple("Picture", "model_name,prompt,sampler,seed,filename")
+class Picture:
+    model_str: str
+    model_name: str
+    model_seed: str
+    model_steps: int
+    prompt: str
+    sampler: str
+    seed: int
+    filename: str
 
+    def __init__(self, **kwargs):
+        for key, val in kwargs.items():
+            setattr(self, key, val)
+    
 def generate_css():
     contents_css_generated = ""
     for prompt in all_prompts:
-        for model_name in all_model_names:
+        for model_str in all_model_strs:
             for sampler in all_samplers:
-                grid_col = gridcol_for(model_name, prompt, sampler)
+                grid_col = gridcol_for(model_str, prompt, sampler)
                 css_cls = f"col_{grid_col}"
                 contents_css_generated += f".{css_cls} {{ display: block; grid-column: {grid_col}; }}\n"
                 contents_css_generated += f"#checkbox_{css_cls}:checked ~ .{css_cls} {{ visibility: hidden; }}\n"
@@ -30,7 +42,7 @@ def generate_css():
             res += f"#{checkbox_id}:checked ~ .{css_cls} {{ visibility: hidden; }}\n"
         return res
     contents_css_generated += print_all_objs("prompt", all_prompts)
-    contents_css_generated += print_all_objs("model", all_model_names)
+    contents_css_generated += print_all_objs("model", all_model_strs)
     contents_css_generated += print_all_objs("sampler", all_samplers)
 
     return contents_css_generated
@@ -39,6 +51,9 @@ def find_pngs():
     #alex34_06500-photo of alexhin person, full body, pencil sketch-k_heun_50
     re_dirname = re.compile(r"(.+[\d_]+)-(.+)-([\w_]+_\d+( [c\d]+)?)")
     re_png_invokeai = re.compile(r"(\d+).(\d+)\.png")
+
+    #alexhin20_f222_5e7_r7_05500
+    re_model_str = re.compile(r"([\w\d_]+)r(\d+)_(\d+)")
 
     all_pics = list()
     for dirname in os.listdir("."):
@@ -49,22 +64,21 @@ def find_pngs():
         if not match:
             continue
     
-        include = True
-        for arg in sys.argv[1:]:
-            if arg[0] == '-' and arg[1:] in dirname:
-                include = False
-            elif arg[0] == '+' and arg[1:] in dirname:
-                include = True
+        if len(sys.argv) > 1:
+            all_include_strs = [arg[1:] for arg in sys.argv[1:] if arg[0] == '+']
+            all_exclude_strs = [arg[1:] for arg in sys.argv[1:] if arg[0] == '-']
 
-        if not include:
-            continue
+            include_all_true = all([arg in dirname for arg in all_include_strs])
+            exclude_any_true = any([arg in dirname for arg in all_exclude_strs])
 
-        model_name = match.group(1)
+            if not include_all_true or exclude_any_true:
+                continue
+
+        model_str = match.group(1)
         prompt = match.group(2)
         sampler = match.group(3)
         
         #prompt_safe = prompt.replace(" ", "_").replace(",", "-").replace("+","P")
-        print(f"model_name {model_name}, prompt '{prompt}', sampler {sampler}", file=sys.stderr)
 
         for short_filename in os.listdir(dirname):
             filename = f"{dirname}/{short_filename}"
@@ -78,14 +92,25 @@ def find_pngs():
                 continue
             seed = int(match.group(2))
 
-            if "alexhin person" in prompt:
-                prompt = prompt.replace("alexhin person", "alexhin (person)")
-            elif prompt.endswith("alexhin"):
-                prompt = prompt.replace("alexhin", "alexhin (person)")
-            else:
-                prompt = prompt.replace("alexhin,", "alexhin (person),")
+            # normalize 'alexhin person' to 'alexhin'
+            prompt = prompt.replace("alexhin person", "alexhin")
 
-            all_pics.append(Picture(model_name, prompt, sampler, seed, filename))
+            match = re_model_str.match(model_str)
+            if match:
+                model_name = match.group(1)
+                if model_name.endswith("_"):
+                    model_name = model_name[:-1]
+                model_seed = int(match.group(2))
+                model_steps = int(match.group(3))
+                model_str_pretty = f"{model_name} seed {model_seed} steps {model_steps}"
+            else:
+                model_name = model_str
+                model_seed = None
+                model_steps = None
+                model_str_pretty = model_str
+
+            print(f"model_str {model_str} (name {model_name}, seed {model_seed}, steps {model_steps}), prompt '{prompt}', sampler {sampler}", file=sys.stderr)
+            all_pics.append(Picture(model_str=model_str, model_str_pretty=model_str_pretty, model_name=model_name, model_seed=model_seed, model_steps=model_steps, prompt=prompt, sampler=sampler, seed=seed, filename=filename))
     
     return all_pics
 
@@ -96,19 +121,20 @@ if __name__ == "__main__":
     columnid_to_sampler = dict()
 
     all_seeds = sorted(list(set([int(pic.seed) for pic in all_pics])))
-    all_model_names = sorted(list(set([pic.model_name for pic in all_pics])))
+    all_model_strs = sorted(list(set([pic.model_str for pic in all_pics])))
+    all_model_strs_pretty = sorted(list(set([pic.model_str_pretty for pic in all_pics])))
     all_prompts = sorted(list(set([pic.prompt for pic in all_pics])))
     all_samplers = sorted(list(set([pic.sampler for pic in all_pics])))
     seed_to_gridrow = {seed: idx + 8 for idx, seed in enumerate(all_seeds)}
-    max_pics = len(all_prompts) * len(all_model_names) * len(all_samplers)
+    max_pics = len(all_prompts) * len(all_model_strs) * len(all_samplers)
 
-    idx_for_model_name = {model_name: idx for idx, model_name in enumerate(all_model_names)}
+    idx_for_model_str = {model_str: idx for idx, model_str in enumerate(all_model_strs)}
     idx_for_prompt = {prompt: idx for idx, prompt in enumerate(all_prompts)}
     idx_for_sampler = {sampler: idx for idx, sampler in enumerate(all_samplers)}
 
-    def gridcol_for(model_name, prompt, sampler):
-        res = idx_for_prompt[prompt] * len(all_model_names) * len(all_samplers)
-        res += idx_for_model_name[model_name] * len(all_samplers)
+    def gridcol_for(model_str, prompt, sampler):
+        res = idx_for_prompt[prompt] * len(all_model_strs) * len(all_samplers)
+        res += idx_for_model_str[model_str] * len(all_samplers)
         res += idx_for_sampler[sampler]
         return res + 2
 
@@ -143,7 +169,7 @@ if __name__ == "__main__":
         print(outside_span)
 
     print_all_objs("prompt", all_prompts, 1)
-    print_all_objs("model", all_model_names, 2)
+    print_all_objs("model", all_model_strs_pretty, 2)
     print_all_objs("sampler", all_samplers, 3)
 
     for seed in all_seeds:
@@ -155,17 +181,18 @@ if __name__ == "__main__":
     <input type="checkbox" id="{checkbox_id}" style="grid-row: {grid_row}; grid-column: 1"/>""")
 
     for prompt_idx, prompt in enumerate(all_prompts):
-        width = len(all_model_names) * len(all_samplers)
+        width = len(all_model_strs) * len(all_samplers)
         prompt_start = prompt_idx * width + 2
         prompt_end = prompt_start + width
         prompt_css_cls = f"prompt_{prompt_idx}"
         print(f"""<span class="header-prompt {prompt_css_cls}" style="grid-column-start: {prompt_start}; grid-column-end: {prompt_end}">{prompt}</span>""")
 
-        for model_idx, model_name in enumerate(all_model_names):
+        for model_idx, model_str in enumerate(all_model_strs):
             model_start = prompt_start + model_idx * len(all_samplers)
             model_end = model_start + len(all_samplers)
             model_css_cls = f"model_{model_idx}"
-            print(f"""<span class="header-model-name {prompt_css_cls} {model_css_cls}" style="grid-column-start: {model_start}; grid-column-end: {model_end}">{model_name}</span>""")
+            model_str_pretty = all_model_strs_pretty[model_idx]
+            print(f"""<span class="header-model-name {prompt_css_cls} {model_css_cls}" style="grid-column-start: {model_start}; grid-column-end: {model_end}">{model_str_pretty}</span>""")
 
             for sampler_idx, sampler in enumerate(all_samplers):
                 sampler_col = model_start + sampler_idx
@@ -178,22 +205,22 @@ if __name__ == "__main__":
 
     for idx, pic in enumerate(all_pics):
         row = seed_to_gridrow[pic.seed]
-        grid_col = gridcol_for(pic.model_name, pic.prompt, pic.sampler)
+        grid_col = gridcol_for(pic.model_str, pic.prompt, pic.sampler)
         grid_row = seed_to_gridrow[pic.seed]
         css_cls = f"col_{grid_col} row_{grid_row}"
 
         css_cls += f" prompt_{idx_for_prompt[pic.prompt]}"
-        css_cls += f" model_{idx_for_model_name[pic.model_name]}"
+        css_cls += f" model_{idx_for_model_str[pic.model_str]}"
         css_cls += f" sampler_{idx_for_sampler[pic.sampler]}"
 
         check_id = f"check_{idx}"
-        args = f"'{pic.prompt}', '{pic.model_name}', '{pic.sampler}', '{check_id}'"
+        args = f"'{pic.prompt}', '{pic.model_str}', '{pic.sampler}', '{check_id}'"
 
         print(f"""
     <span class="tooltip {css_cls}"">
     <span class="tooltiptext">
         <ul>
-            <li>model_name {pic.model_name}</li>
+            <li>model_str {pic.model_str}</li>
             <li>prompt {pic.prompt}</li>
             <li>sampler {pic.sampler}</li>
             <li>seed {pic.seed}</li>
