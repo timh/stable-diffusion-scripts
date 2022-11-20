@@ -38,7 +38,7 @@ def gen(config: argparse.Namespace):
 
     for one in gen_renders(config):
         sampler_tag = f"{one.sampler_type}_{one.sampler_steps}"
-        outdir = f"outputs/{one.model}-{one.prompt}-{sampler_tag} c{one.cfg:02}"
+        outdir = f"{config.output_dir}/{one.model}-{one.prompt}-{sampler_tag} c{one.cfg:02}"
         if os.path.isdir(outdir) and len(os.listdir(outdir)) > 0:
             if last_outdir != outdir:
                 print(f"\"{outdir}\" already exists, skipping.")
@@ -105,6 +105,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("-m", "--model", dest='models', nargs='+', action='append', required=True)
     parser.add_argument("-s", "--sampler", dest='samplers', nargs='+', action='append')
     parser.add_argument("-n", "--num", dest='num_images', type=int, default=10, help="num images")
+    parser.add_argument("-o", "--output", dest='output_dir', default="outputs", help="output directory")
     parser.add_argument("--seed", dest='base_seed', type=int, default=0)
     parser.add_argument("--cfg", dest='cfgs', nargs='+', action='append', help="CFG")
     parser.add_argument("--dry-run", action='store_true')
