@@ -34,7 +34,7 @@ inpainting-1.5:
 
 """)
 
-    for filename in checkpoints:
+    for filename in sorted(checkpoints):
         name = filename.replace(".ckpt", "")
         config = "configs/stable-diffusion/v1-inference.yaml"
         if "inpainting" in filename:
