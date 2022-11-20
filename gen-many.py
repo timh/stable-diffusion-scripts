@@ -4,12 +4,13 @@ import re
 import subprocess
 import argparse
 import shlex
+import time
 from collections import namedtuple
 from typing import List
 
 # ddim, k_dpm_2_a, k_dpm_2, k_euler_a, k_euler, k_heun, k_lms, plms
 
-OneRender = namedtuple('OneRender', 'model,prompt,sampler_type,sampler_steps,cfg,seed')
+OneRender = namedtuple('OneRender', 'model,prompt,sampler_type,sampler_steps,cfg')
 
 # generator for combinatorial set of images to generate
 def gen_renders(config: argparse.Namespace):
@@ -18,10 +19,8 @@ def gen_renders(config: argparse.Namespace):
             for sampler in config.samplers:
                 sampler_type, sampler_steps = sampler.split(":")
                 for cfg in config.cfgs:
-                    for idx in range(config.num_images):
-                        seed = config.base_seed + idx
-                        one = OneRender(model=model, prompt=prompt, sampler_type=sampler_type, sampler_steps=sampler_steps, cfg=cfg, seed=seed)
-                        yield one
+                    one = OneRender(model=model, prompt=prompt, sampler_type=sampler_type, sampler_steps=sampler_steps, cfg=cfg)
+                    yield one
 
 def gen(config: argparse.Namespace):
     last_model: str = None
@@ -55,24 +54,47 @@ def gen(config: argparse.Namespace):
                 "--model", one.model,
                 "--from_file", "-"
             ]
-            print(f"RUN: {' '.join(cmd)}")
+            print(f"RUN: \033[1;32m{' '.join(cmd)}\033[0m")
             if not config.dry_run:
-                proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+                os.environ['PYTHONUNBUFFERED'] = '1'
+                proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             last_model = one.model
             last_cmd = cmd
 
         prompt = one.prompt
-        # if one.model in ["alexhin20_1e6_3500", "alex20_03500"]:
-        #     prompt = prompt.replace("alexhin", "alexhin person")
-        img_cmd = (f"{prompt} "
-                   f"--sampler {one.sampler_type} --steps {one.sampler_steps} "
-                   f"--cfg_scale {one.cfg} "
-                   f"--seed {one.seed} "
-                   f"--outdir \"{outdir}\"\n")
-        if config.dry_run:
-            print(f"img_cmd: {img_cmd}", end="")
-        else:
-            proc.stdin.write(bytes(img_cmd, "utf-8"))
+        time_start = time.perf_counter()
+        for idx in range(config.num_images):
+            seed = config.base_seed + idx
+            img_cmd = (f"\"{prompt}\" "
+                       f"--sampler {one.sampler_type} --steps {one.sampler_steps} "
+                       f"--cfg_scale {one.cfg} "
+                       f"--seed {seed} "
+                       f"--outdir \"{outdir}\"\n")
+            if idx == 0:
+                print(f"img_cmd: \033[1m{img_cmd}\033[0m", end="")
+            if not config.dry_run:
+                proc.stdin.write(bytes(img_cmd, "utf-8"))
+
+        if not config.dry_run:
+            # wait for this set of images to generate: send a command that will be
+            # unrecognized, and look for the error message telling us so.
+            end_mark = "--error_end_mark"
+            expect_end = "error: unrecognized arguments"
+            proc.stdin.write(bytes(end_mark + "\n", "utf-8"))
+
+            proc.stdin.flush()
+            while True:
+                line = proc.stdout.readline().decode('utf-8')
+                if line is None:
+                    break
+                print(line, end='')
+                if expect_end in line:
+                    break
+            time_end = time.perf_counter()
+
+            time_filename = f"{outdir}/timing.txt"
+            with open(time_filename, "w") as file:
+                file.write(f"{time_end - time_start}\n")
     
     close_proc(last_cmd, proc)
 
@@ -91,7 +113,7 @@ class LoadFromFile (argparse.Action):
                 act.required = False
 
             parser._actions = file_actions
-            parser.parse_args(shlex.split(file.read()), config)
+            parser.parse_args(shlex.split(file.read(), comments=True), config)
 
             # make any still-missing args required again, so we error out.
             for act in file_actions:
@@ -123,7 +145,6 @@ def parse_args() -> argparse.Namespace:
     config.cfgs = [int(inside) for outside in config.cfgs for inside in outside]
 
     return config
-
 
 if __name__ == "__main__":
     config = parse_args()
