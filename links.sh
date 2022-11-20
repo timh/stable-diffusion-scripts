@@ -21,11 +21,13 @@ do(
       # create the CKPT, which is actually a zip file. some consumers of the CKPT file expect 
       # the top directory to be named "archive", so fake it with symlinks.
       echo "creating $CHECKPOINT_PATH..."
+      ln -s "$MODEL_PATH" archive
       python $TOP/diffusers/scripts/convert_diffusers_to_original_stable_diffusion.py --model_path $MODEL_PATH --checkpoint_path $CHECKPOINT_PATH
       echo "$CHECKPOINT_PATH created"
 
       # add the text files with training parameters to the checkpoint
       zip -u $CHECKPOINT_PATH archive/*.txt
+      rm -f archive
     fi
     ln -sf "$CHECKPOINT_PATH" "$TOP/stable-diffusion-webui/models/Stable-diffusion/"
   fi
