@@ -4,6 +4,14 @@ import argparse
 import subprocess
 from typing import List
 
+def args_to_quoted_str(args: List[str]) -> str:
+    def one_arg(s: str) -> str:
+        if " " in s:
+            return '"' + s + '"'
+        return s
+    
+    return " ".join(map(one_arg, args))
+
 class Config(argparse.Namespace):
     input_model_name: str
 
@@ -66,10 +74,10 @@ class Config(argparse.Namespace):
                 "--train_batch_size", str(self.train_batch_size),
                 "--train_text_encoder",
                 "--sample_batch_size=1",
-                "--gradient_accumulation_steps=1",
+                "--gradient_accumulation_steps=2",
                 "--gradient_checkpointing",
                 "--use_8bit_adam",
-                "--lr_scheduler=constant",
+                "--lr_scheduler", self.lr_scheduler,
                 "--lr_warmup_steps=0",
                 "--max_train_steps", str(max_train_steps),
                 "--mixed_precision=fp16"]
@@ -84,7 +92,7 @@ class Config(argparse.Namespace):
         print(f"   instance_prompt: {self.instance_prompt}")
         print(f"         class_dir: {self.class_dir}")
         print(f"      class_prompt: {self.class_prompt}")
-        print(f"              args: {' '.join(args)}")
+        print(f"              args: {args_to_quoted_str(args)}")
 
         if not self.dry_run:
             res = subprocess.run(args, stdout=sys.stdout, stderr=sys.stderr, check=True)
@@ -96,8 +104,8 @@ class Config(argparse.Namespace):
                 filename = f"{dirname}/train-cmdline.txt"
                 os.makedirs(dirname, exist_ok=True)
                 with open(filename, "w") as output:
-                    output.write(f"# {' '.join(args)}\n")
-                    output.write(f"# {' '.join(sys.argv)}\n")
+                    output.write(f"# {args_to_quoted_str(args)}\n")
+                    output.write(f"# {args_to_quoted_str(sys.argv)}\n")
                     output.write(f"# --max_train_steps: {self.max_train_steps}\n")
                     output.write(f"# --output_root: {self.output_root}\n")
         
@@ -126,6 +134,7 @@ def parse_args() -> Config:
     parser.add_argument("--instance_dir", default="/workspace/images.alex-24", help="instance images directory")
     parser.add_argument("--instance_prompt", default="photo of alexhin", help="instance prompt")
     parser.add_argument("--learning_rate", "--lr", "-l", default="1e-6", help="learning rate")
+    parser.add_argument("--lr_scheduler", default="constant", help="scheduler type: constant, linear, cosine")
     parser.add_argument("--seeds", "-S", default="1", help="random seeds (comma separated for multiple)")
     parser.add_argument("--steps", "-s", dest='max_train_steps', type=int, required=True, default=2000, help="number of training steps")
     parser.add_argument("--model", dest='input_model_name', default="runwayml/stable-diffusion-v1-5", help="name or path for base model")
