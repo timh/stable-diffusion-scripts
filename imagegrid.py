@@ -68,7 +68,10 @@ def find_pngs():
             all_include_strs = [arg[1:] for arg in sys.argv[1:] if arg[0] == '+']
             all_exclude_strs = [arg[1:] for arg in sys.argv[1:] if arg[0] == '-']
 
-            include_any_true = any([arg in dirname for arg in all_include_strs])
+            if len(all_include_strs) > 0:
+                include_any_true = any([arg in dirname for arg in all_include_strs])
+            else:
+                include_any_true = True
             exclude_any_true = any([arg in dirname for arg in all_exclude_strs])
 
             if not include_any_true or exclude_any_true:
