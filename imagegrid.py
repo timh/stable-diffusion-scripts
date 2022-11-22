@@ -53,7 +53,7 @@ def find_pngs():
     re_png_invokeai = re.compile(r"(\d+).(\d+)\.png")
 
     #alexhin20_f222_5e7_r7_05500
-    re_model_str = re.compile(r"([\w\d_]+)r(\d+)_(\d+)")
+    re_model_str = re.compile(r"([\w\d\._]+)_r(\d+)_(\d+)")
 
     all_pics = list()
     for dirname in os.listdir("."):
@@ -68,10 +68,10 @@ def find_pngs():
             all_include_strs = [arg[1:] for arg in sys.argv[1:] if arg[0] == '+']
             all_exclude_strs = [arg[1:] for arg in sys.argv[1:] if arg[0] == '-']
 
-            include_all_true = all([arg in dirname for arg in all_include_strs])
+            include_any_true = any([arg in dirname for arg in all_include_strs])
             exclude_any_true = any([arg in dirname for arg in all_exclude_strs])
 
-            if not include_all_true or exclude_any_true:
+            if not include_any_true or exclude_any_true:
                 continue
 
         model_str = match.group(1)
@@ -98,11 +98,9 @@ def find_pngs():
             match = re_model_str.match(model_str)
             if match:
                 model_name = match.group(1)
-                if model_name.endswith("_"):
-                    model_name = model_name[:-1]
                 model_seed = int(match.group(2))
                 model_steps = int(match.group(3))
-                model_str_pretty = f"{model_name} seed {model_seed} steps {model_steps}"
+                model_str_pretty = f"{model_name} seed {model_seed} steps {model_steps:04}"
             else:
                 model_name = model_str
                 model_seed = None

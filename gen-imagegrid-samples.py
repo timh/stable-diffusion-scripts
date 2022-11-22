@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-import os, os.path
+import sys
+import os
+import os.path
 
 OUTPUTS_DIR = "/workspace/outputs"
 SAMPLES_DIR = "/workspace/output-samples"
@@ -37,5 +39,5 @@ if __name__ == "__main__":
     
     # then call imagegrid on the output so we can look at them all together.
     os.chdir(SAMPLES_DIR)
-    os.system("python /scripts/imagegrid.py > imagegrid.html")
+    os.system(f"python /scripts/imagegrid.py {' '.join(sys.argv[1:])}> imagegrid.html")
 
