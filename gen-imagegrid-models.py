@@ -53,15 +53,18 @@ def get_configs():
 def gen_samples(config: Config):
     sample_dir = f"{IMAGES_DIR}/{config.model_name}_{int(config.steps):04}-{PROMPT}-{SCHEDULER_NAME}_{STEPS}"
     os.makedirs(sample_dir, exist_ok=True)
-        
-    pipe = StableDiffusionPipeline.from_pretrained(config.model_dir, revision="fp16", torch_dtype=torch.float16)
-    pipe.to("cuda")
 
+    pipe = None        
     for idx in range(NUM_IMAGES):
         filename = f"{sample_dir}/{idx:02}.{idx:02}.png"
         print(f"{idx + 1}/{NUM_IMAGES}: {filename}")
         if os.path.exists(filename):
             continue
+
+        if pipe is None:
+            pipe = StableDiffusionPipeline.from_pretrained(config.model_dir, revision="fp16", torch_dtype=torch.float16)
+            pipe.to("cuda")
+
         generator = torch.Generator("cuda").manual_seed(SEED + idx)
         images = pipe(config.prompt, guidance_scale=CFG, generator=generator, scheduler=scheduler, num_inference_steps=STEPS, safety_checker=None).images
         images[0].save(filename)
