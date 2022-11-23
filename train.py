@@ -59,7 +59,6 @@ class Config(argparse.Namespace):
                 "--output_dir", output_dir,
                 "--instance_data_dir", self.instance_dir,
                 "--instance_prompt", self.instance_prompt,
-                "--save_sample_prompt", self.instance_prompt,
                 "--class_data_dir", self.class_dir,
                 "--class_prompt", self.class_prompt,
                 "--learning_rate", str(self.learning_rate),
@@ -84,6 +83,9 @@ class Config(argparse.Namespace):
 
         if "inpainting" in self.input_model_name:
             args.append("--not_cache_latents")
+        else:
+            args.extend(["--save_sample_prompt", self.instance_prompt])
+
 
         print(f"run_one:")
         print(f"       output_dir: {output_dir}")
