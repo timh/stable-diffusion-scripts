@@ -31,7 +31,6 @@ if __name__ == "__main__":
             if os.path.isdir(samples_dir_0):
                 samples_dir = samples_dir_0
             for sample in os.listdir(samples_dir):
-                print(f"sample {sample}")
                 if not sample.endswith(".png"):
                     continue
 

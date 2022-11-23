@@ -53,7 +53,7 @@ def find_pngs():
     re_png_invokeai = re.compile(r"(\d+).(\d+)\.png")
 
     #alexhin20_f222_5e7_r7_05500
-    re_model_str = re.compile(r"([\w\d\._]+)_r(\d+)_(\d+)")
+    re_model_str = re.compile(r"([\w\d\._-]+)_r(\d+)_(\d+)")
 
     all_pics = list()
     for dirname in os.listdir("."):
