@@ -2,6 +2,7 @@ import os, os.path
 import sys
 import argparse
 import subprocess
+import shlex
 from typing import List
 
 def args_to_quoted_str(args: List[str]) -> str:
@@ -63,6 +64,7 @@ class Config(argparse.Namespace):
                 "--class_prompt", self.class_prompt,
                 "--learning_rate", str(self.learning_rate),
                 "--save_interval", str(self.save_interval),
+                "--save_min_steps", str(self.save_min_steps),
                 "--save_infer_steps=50",
                 "--seed", str(seed),
                 "--pretrained_model_name_or_path", input_model_name,
@@ -106,10 +108,11 @@ class Config(argparse.Namespace):
                 filename = f"{dirname}/train-cmdline.txt"
                 os.makedirs(dirname, exist_ok=True)
                 with open(filename, "w") as output:
+                    output.write(f"{train_py}:")
                     output.write(f"# {args_to_quoted_str(args)}\n")
-                    output.write(f"# {args_to_quoted_str(sys.argv)}\n")
-                    output.write(f"# --max_train_steps: {self.max_train_steps}\n")
-                    output.write(f"# --output_root: {self.output_root}\n")
+                    output.write(f"#")
+                    output.write(f"train.py:")
+                    output.write(f"# {args_to_quoted_str(sys.argv[1:])}\n")
         
         if prior_steps != 0:
             for steps in range(self.save_interval, max_train_steps+1, self.save_interval):
@@ -141,12 +144,22 @@ def parse_args() -> Config:
     parser.add_argument("--steps", "-s", dest='max_train_steps', type=int, required=True, default=2000, help="number of training steps")
     parser.add_argument("--model", dest='input_model_name', default="runwayml/stable-diffusion-v1-5", help="name or path for base model")
     parser.add_argument("--save_interval", type=int, default=500, help="save every <N> steps")
+    parser.add_argument("--save_min_steps", type=int, default=500, help="only save checkpoints at or greater than <N> steps")
     parser.add_argument("--train_batch_size", type=int, default=1, help="train batch size")
     parser.add_argument("--dry_run", default=False, help="dry run: don't do actions", action='store_true')
 
     cfg = Config()
-    args = parser.parse_args(None, namespace=cfg)
 
+    # optional ~/.sdscripts.conf file including default arguments
+    config_args = []
+    config_filename = os.path.join(os.environ["HOME"], ".sdscripts.conf")
+    if os.path.exists(config_filename):
+        with open(config_filename, "r") as config:
+            config_args = shlex.split(config.read(), comments=True)
+        print(f"read {args_to_quoted_str(config_args)}")
+        config_args.extend(sys.argv[1:])
+    
+    parser.parse_args(config_args, namespace=cfg)
     cfg.validate()
 
     return cfg
