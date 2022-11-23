@@ -27,6 +27,9 @@ if __name__ == "__main__":
             os.makedirs(link_dir, exist_ok=True)
 
             samples_dir = f"{steps_dir}/samples"
+            samples_dir_0 = f"{samples_dir}/0"
+            if os.path.isdir(samples_dir_0):
+                samples_dir = samples_dir_0
             for sample in os.listdir(samples_dir):
                 print(f"sample {sample}")
                 if not sample.endswith(".png"):
