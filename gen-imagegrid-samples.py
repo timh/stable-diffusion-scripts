@@ -37,8 +37,9 @@ if __name__ == "__main__":
 
                 sample_filename = f"{samples_dir}/{sample}"
                 link_filename = f"{link_dir}/00.{sample}"
-                
-                os.system(f"ln -sfv {sample_filename} {link_filename}")
+
+                if not os.path.islink(link_filename):
+                    os.system(f"ln -sfv {sample_filename} {link_filename}")
     
     # then call imagegrid on the output so we can look at them all together.
     os.chdir(SAMPLES_DIR)
