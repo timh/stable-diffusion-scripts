@@ -50,11 +50,11 @@ def get_configs():
 
     return res
 
-def gen_samples(config: Config):
+def gen_images(config: Config):
     sample_dir = f"{IMAGES_DIR}/{config.model_name}_{int(config.steps):04}-{PROMPT}-{SCHEDULER_NAME}_{STEPS}"
     os.makedirs(sample_dir, exist_ok=True)
 
-    pipe = None        
+    pipe = None
     for idx in range(NUM_IMAGES):
         filename = f"{sample_dir}/{idx:02}.{idx:02}.png"
         print(f"{idx + 1}/{NUM_IMAGES}: {filename}")
@@ -73,8 +73,8 @@ def gen_samples(config: Config):
 if __name__ == "__main__":
     configs = get_configs()
     for idx, config in enumerate(configs):
-        print(f"\033[1;32m{idx + 1}/{len(configs)} gen_samples for {config.model_dir} ({config.model_name} : {config.steps})\033[0m")
-        gen_samples(config)
+        print(f"\033[1;32m{idx + 1}/{len(configs)} gen_images for {config.model_dir} ({config.model_name} : {config.steps})\033[0m")
+        gen_images(config)
         print()
     
     os.chdir(IMAGES_DIR)
