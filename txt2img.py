@@ -49,7 +49,15 @@ class ImageSet:
 
 class ImageGenerator:
     pipeline = None
-    pipeline_str: str = ""
+    scheduler = None
+
+    last_sampler_name: str = ""
+    last_model_dir: str = ""
+
+    num_parallel: int = 0
+
+    def __init__(self, num_parallel: int = 1):
+        self.num_parallel = num_parallel
 
     def gen_images(self, image_set: ImageSet, 
                     filename_func: Callable[[ImageSet, int], str] = None,
@@ -58,7 +66,7 @@ class ImageGenerator:
         def _filename(image_set: ImageSet, idx: int) -> str:
             output_dir = f"{image_set.output_dir}/{image_set.model_str}-{image_set.prompt}-{image_set.sampler_name}_{image_set.sampler_steps}"
             os.makedirs(output_dir, exist_ok=True)
-            filename = f"{output_dir}/{idx:02}.{idx:02}.png"
+            filename = f"{output_dir}/{idx:10}.{idx + 1:02}.png"
             return filename
 
         def _save_image(image_set: ImageSet, idx: int, filename: str, image: PIL.Image.Image):
@@ -71,50 +79,49 @@ class ImageGenerator:
             save_image_fun = _save_image
 
         # re-create scheduler/pipeline only when the sampler or model changes.
-        pipeline_str = f"{image_set.model_dir}--{image_set.sampler_name}:{image_set.sampler_steps}"
-        if self.pipeline is None or self.pipeline_str != pipeline_str:
-            scheduler = image_set.scheduler_class.from_pretrained(image_set.model_dir, subfolder="scheduler")
-            self.pipeline = StableDiffusionPipeline.from_pretrained(image_set.model_dir, scheduler=scheduler, revision="fp16", torch_dtype=torch.float16)
+        if image_set.sampler_name != self.last_sampler_name:
+            self.scheduler = image_set.scheduler_class.from_pretrained(image_set.model_dir, subfolder="scheduler")
+            self.last_sampler_name = image_set.sampler_name
+        if image_set.model_dir != self.last_model_dir:
+            self.pipeline = StableDiffusionPipeline.from_pretrained(image_set.model_dir, revision="fp16", torch_dtype=torch.float16)
             self.pipeline = self.pipeline.to("cuda")
-            self.pipeline_str = pipeline_str
+            self.last_model_dir = image_set.model_dir
+        self.pipeline.scheduler = self.scheduler
 
-        for idx in range(image_set.num_images):
-            filename = filename_func(image_set, idx)
-            print(f"{idx + 1}/{image_set.num_images}: {filename}")
-            if filename is not None and os.path.exists(filename):
-                continue
+        filenames = [filename_func(image_set, idx) for idx in range(image_set.num_images)]
+        needed_filenames = [filename for filename in filenames if filename is None or not os.path.exists(filename)]
 
-            generator = torch.Generator("cuda").manual_seed(image_set.seed + idx)
+        while len(needed_filenames) > 0:
+            num_needed = len(needed_filenames)
+            num_batch = min(num_needed, self.num_parallel)
+            num_existing = image_set.num_images - num_needed
+            print(f"{num_existing + 1}/{image_set.num_images}: {needed_filenames[0]}")
+
+            seed = image_set.seed + num_existing
+            generator = torch.Generator("cuda").manual_seed(seed)
             images = self.pipeline(image_set.prompt, 
-                                   guidance_scale=image_set.guidance_scale, 
-                                   num_inference_steps=image_set.sampler_steps,
-                                   safety_checker=None).images
+                                    generator=generator,
+                                    guidance_scale=image_set.guidance_scale, 
+                                    num_inference_steps=image_set.sampler_steps,
+                                    num_images_per_prompt=num_batch,
+                                    safety_checker=None).images
 
-            save_image_fun(image_set, idx, filename, images[0])
+            for idx in range(num_batch):
+                save_image_fun(image_set, idx, needed_filenames[idx], images[idx])
+            
+            needed_filenames = needed_filenames[num_batch:]
 
         print()
 
 if __name__ == "__main__":
-    # im15 = ImageSet("/home/tim/devel/stable-diffusion-v1-5", "stable-diffusion-1.5", "a cat sitting on a table", sampler_steps=50)
-    # im15inp = ImageSet("/home/tim/devel/stable-diffusion-inpainting", "stable-diffusion-1.5", "a cat sitting on a table", sampler_steps=50)
-
     image_sets = []
-    # for steps in [2500, 3000, 3500]:
-    #     model_name = "alexhin20v2pf_cos0.8e6_r12"
-    #     dirname = f"/home/tim/Downloads/{model_name}/{steps}"
-    #     model_str = f"{model_name}_{steps}"
-
-    #     image_set = ImageSet(dirname, model_str, "portrait of alexhin person, pencil sketch", 
-    #                          sampler_name='dpm', sampler_steps=50,
-    #                          num_images=10)
-    #     image_sets.append(image_set)
     for model_name in ['stable-diffusion-2', 'stable-diffusion-v1-5']:
         dirname = f"/home/tim/devel/{model_name}"
 
-        for sampler in ['euler', 'euler_a', 'ddim', 'dpm']:
+        for sampler in ['euler', 'ddim']:
             image_set = ImageSet(dirname, model_name, "photo of a dog sitting on a table", 
-                                sampler_name=sampler, sampler_steps=50,
-                                num_images=5)
+                                sampler_name=sampler, sampler_steps=30,
+                                num_images=7)
             image_sets.append(image_set)
 
 
