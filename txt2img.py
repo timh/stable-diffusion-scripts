@@ -8,11 +8,10 @@ from diffusers import StableDiffusionPipeline, VersatileDiffusionTextToImagePipe
 from diffusers import EulerAncestralDiscreteScheduler, DDIMScheduler, EulerDiscreteScheduler, DPMSolverMultistepScheduler, KarrasVeScheduler, ScoreSdeVeScheduler
 
 SCHEDULERS = {
-    'ddim': DDIMScheduler,
-    'euler_a': EulerAncestralDiscreteScheduler,
-    'euler': EulerDiscreteScheduler,
-    'dpm': DPMSolverMultistepScheduler,
-    'sde_ve': ScoreSdeVeScheduler,
+    'ddim': DDIMScheduler,                      # ddim:50 works for SD2
+    'euler_a': EulerAncestralDiscreteScheduler, # euler_a:50 generates noise for SD2
+    'euler': EulerDiscreteScheduler,            # euler:50 works
+    'dpm': DPMSolverMultistepScheduler,         # dpm:50 generates noise
 }
 
 class ImageSet:
@@ -46,11 +45,11 @@ class ImageSet:
 
         if self.sampler_name not in SCHEDULERS:
             raise Exception(f"unknown scheduler '{self.scheduler_name}'")
-        self.scheduler = SCHEDULERS[self.sampler_name]()
+        self.scheduler_class = SCHEDULERS[self.sampler_name]()
 
 class ImageGenerator:
     pipeline = None
-    pipeline_model_str: str = ""
+    pipeline_str: str = ""
 
     def gen_images(self, image_set: ImageSet, 
                     filename_func: Callable[[ImageSet, int], str] = None,
@@ -71,9 +70,13 @@ class ImageGenerator:
         if save_image_fun is None:
             save_image_fun = _save_image
 
-        scheduler = image_set.scheduler.from_pretrained(image_set.model_dir, subfolder="scheduler")
-        pipe = StableDiffusionPipeline.from_pretrained(image_set.model_dir, scheduler=scheduler, revision="fp16", torch_dtype=torch.float16)
-        pipe = pipe.to("cuda")
+        # re-create scheduler/pipeline only when the sampler or model changes.
+        pipeline_str = f"{image_set.model_dir}--{image_set.sampler_name}:{image_set.sampler_steps}"
+        if self.pipeline is None or self.pipeline_str != pipeline_str:
+            scheduler = image_set.scheduler_class.from_pretrained(image_set.model_dir, subfolder="scheduler")
+            self.pipeline = StableDiffusionPipeline.from_pretrained(image_set.model_dir, scheduler=scheduler, revision="fp16", torch_dtype=torch.float16)
+            self.pipeline = self.pipeline.to("cuda")
+            self.pipeline_str = pipeline_str
 
         for idx in range(image_set.num_images):
             filename = filename_func(image_set, idx)
@@ -82,10 +85,10 @@ class ImageGenerator:
                 continue
 
             generator = torch.Generator("cuda").manual_seed(image_set.seed + idx)
-            images = pipe(image_set.prompt, 
-                          guidance_scale=image_set.guidance_scale, 
-                          num_inference_steps=image_set.sampler_steps,
-                          safety_checker=None).images
+            images = self.pipeline(image_set.prompt, 
+                                   guidance_scale=image_set.guidance_scale, 
+                                   num_inference_steps=image_set.sampler_steps,
+                                   safety_checker=None).images
 
             save_image_fun(image_set, idx, filename, images[0])
 
@@ -108,7 +111,7 @@ if __name__ == "__main__":
     for model_name in ['stable-diffusion-2', 'stable-diffusion-v1-5']:
         dirname = f"/home/tim/devel/{model_name}"
 
-        for sampler in ['euler', 'euler_a']:
+        for sampler in ['euler', 'euler_a', 'ddim', 'dpm']:
             image_set = ImageSet(dirname, model_name, "photo of a dog sitting on a table", 
                                 sampler_name=sampler, sampler_steps=50,
                                 num_images=5)
