@@ -4,14 +4,24 @@ import os
 import sys
 import torch
 import PIL
-from diffusers.pipelines import StableDiffusionPipeline
-from diffusers.schedulers import EulerAncestralDiscreteScheduler, DDIMScheduler, LMSDiscreteScheduler, EulerDiscreteScheduler
+# from diffusers.pipelines import StableDiffusionPipeline
+# from diffusers.schedulers import EulerAncestralDiscreteScheduler, DDIMScheduler, EulerDiscreteScheduler, DPMSolverMultistepScheduler, KarrasVeScheduler, ScoreSdeVeScheduler
+from diffusers import StableDiffusionPipeline
+from diffusers import EulerAncestralDiscreteScheduler, DDIMScheduler, EulerDiscreteScheduler, DPMSolverMultistepScheduler, KarrasVeScheduler, ScoreSdeVeScheduler
 
 SCHEDULERS = {
-    'ddim': DDIMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", clip_sample=False, set_alpha_to_one=False),
-    'euler_a': EulerAncestralDiscreteScheduler(),
-    'euler': EulerDiscreteScheduler(),
-    'lms': LMSDiscreteScheduler()
+    # 'ddim': DDIMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", clip_sample=False, set_alpha_to_one=False),
+    # 'euler_a': EulerAncestralDiscreteScheduler(),
+    # 'euler': EulerDiscreteScheduler(),
+    # 'lms': LMSDiscreteScheduler(),
+    # 'dpm': DPMSolverMultistepScheduler(),
+    # 'karras_ve': KarrasVeScheduler(),
+    # 'sde_ve': ScoreSdeVeScheduler()
+    'ddim': DDIMScheduler,
+    'euler_a': EulerAncestralDiscreteScheduler,
+    'euler': EulerDiscreteScheduler,
+    'dpm': DPMSolverMultistepScheduler,
+    'sde_ve': ScoreSdeVeScheduler,
 }
 
 class ImageSet:
@@ -45,7 +55,8 @@ class ImageSet:
 
         if self.sampler_name not in SCHEDULERS:
             raise Exception(f"unknown scheduler '{self.scheduler_name}'")
-        self.scheduler = SCHEDULERS[self.sampler_name]
+        # self.scheduler = SCHEDULERS[self.sampler_name](self.sampler_steps)
+        self.scheduler = SCHEDULERS[self.sampler_name](self.sampler_steps)
 
 class ImageGenerator:
     pipeline = None
@@ -70,6 +81,7 @@ class ImageGenerator:
         if save_image_fun is None:
             save_image_fun = _save_image
 
+
         pipe = None        
         for idx in range(image_set.num_images):
             filename = filename_func(image_set, idx)
@@ -77,10 +89,14 @@ class ImageGenerator:
             if filename is not None and os.path.exists(filename):
                 continue
 
-            if self.pipeline is None or self.pipeline_model_str != image_set.model_str:
-                self.pipeline = StableDiffusionPipeline.from_pretrained(image_set.model_dir, revision="fp16", torch_dtype=torch.float16, safety_checker=None)
-                self.pipeline.to("cuda")
-                self.pipeline_model_str = image_set.model_str
+            # if self.pipeline is None or self.pipeline_model_str != image_set.model_str:
+            #     self.pipeline = StableDiffusionPipeline.from_pretrained(image_set.model_dir, revision="fp16", torch_dtype=torch.float16, safety_checker=None)
+            #     self.pipeline.to("cuda")
+            #     self.pipeline_model_str = image_set.model_str
+            
+            # pipeline = StableDiffusionPipeline.from_pretrained(image_set.model_dir, scheduler=image_set.scheduler, revision="fp16", torch_dtype=torch.float16, safety_checker=None)
+            self.pipeline = StableDiffusionPipeline.from_pretrained(image_set.model_dir, scheduler=image_set.scheduler, safety_checker=None)
+            self.pipeline.to("cuda")
 
             generator = torch.Generator("cuda").manual_seed(image_set.seed + idx)
             images = self.pipeline(image_set.prompt, 
@@ -97,13 +113,24 @@ if __name__ == "__main__":
     # im15inp = ImageSet("/home/tim/devel/stable-diffusion-inpainting", "stable-diffusion-1.5", "a cat sitting on a table", sampler_steps=50)
 
     image_sets = []
-    for steps in [2500, 3000, 3500]:
-        model_name = "alexhin20v2pf_cos0.8e6_r12"
-        dirname = f"/home/tim/Downloads/{model_name}/{steps}"
-        model_str = f"{model_name}_{steps}"
+    # for steps in [2500, 3000, 3500]:
+    #     model_name = "alexhin20v2pf_cos0.8e6_r12"
+    #     dirname = f"/home/tim/Downloads/{model_name}/{steps}"
+    #     model_str = f"{model_name}_{steps}"
 
-        image_set = ImageSet(dirname, model_str, "portrait of alexhin person, pencil sketch", sampler_steps=50, num_images=10)
-        image_sets.append(image_set)
+    #     image_set = ImageSet(dirname, model_str, "portrait of alexhin person, pencil sketch", 
+    #                          sampler_name='dpm', sampler_steps=50,
+    #                          num_images=10)
+    #     image_sets.append(image_set)
+    for model_name in ['stable-diffusion-2', 'stable-diffusion-v1-5']:
+        dirname = f"/home/tim/devel/{model_name}"
+
+        for sampler in ['euler']:
+            image_set = ImageSet(dirname, model_name, "photo of a dog sitting on a table", 
+                                sampler_name=sampler, sampler_steps=50,
+                                num_images=5)
+            image_sets.append(image_set)
+
 
     gen = ImageGenerator()
     for image_set in image_sets:
