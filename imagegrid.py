@@ -49,7 +49,8 @@ def generate_css():
 
 def find_pngs():
     #alex34_06500-photo of alexhin person, full body, pencil sketch-k_heun_50
-    re_dirname = re.compile(r"(.+[\d_]+)-(.+)-([\w_]+_\d+( [c\d]+)?)")
+    re_dirname = re.compile(r"(.+[\d_]+)--(.+)--([\w_]+_\d+( [c\d]+)?)")
+    re_dirname_old = re.compile(r"(.+[\d_]+)-(.+)-([\w_]+_\d+( [c\d]+)?)")
     re_png_invokeai = re.compile(r"(\d+).(\d+)\.png")
 
     #alexhin20_f222_5e7_r7_05500
@@ -62,7 +63,9 @@ def find_pngs():
 
         match = re_dirname.match(dirname)
         if not match:
-            continue
+            match = re_dirname_old.match(dirname)
+            if not match:
+                continue
     
         if len(sys.argv) > 1:
             all_include_strs = [arg[1:] for arg in sys.argv[1:] if arg[0] == '+']
