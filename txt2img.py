@@ -133,8 +133,8 @@ if __name__ == "__main__":
         'sd15': "/home/tim/devel/stable-diffusion-v1-5",
     }
     for model_name, dirname in models.items():
-        for sampler_str in ['euler:50', 'ddim:30']:
-            for prompt in ["photo of a dog sitting on a table", "color pencil sketch of a cute dog"]:
+        for sampler_str in ['euler:50']:
+            for prompt in ["photo of a cute dog", "color pencil sketch of a cute dog"]:
                 image_set = ImageSet(prompt, dirname, model_str=model_name,
                                      sampler_str=sampler_str,
                                      num_images=10)
