@@ -92,11 +92,11 @@ class ImageGenerator:
             save_image_fun = _save_image
 
         # re-create scheduler/pipeline only when the sampler or model changes.
-        if image_set.sampler_name != self.last_sampler_name:
+        if image_set.sampler_name != self.last_sampler_name or image_set.model_dir != self.last_model_dir:
             self.scheduler = image_set.scheduler_class.from_pretrained(image_set.model_dir, subfolder="scheduler")
             self.last_sampler_name = image_set.sampler_name
         if image_set.model_dir != self.last_model_dir:
-            self.pipeline = StableDiffusionPipeline.from_pretrained(image_set.model_dir, revision="fp16", torch_dtype=torch.float16)
+            self.pipeline = StableDiffusionPipeline.from_pretrained(image_set.model_dir, revision="fp16", torch_dtype=torch.float16, safety_checker=None)
             self.pipeline = self.pipeline.to("cuda")
             self.last_model_dir = image_set.model_dir
         self.pipeline.scheduler = self.scheduler
@@ -116,8 +116,7 @@ class ImageGenerator:
                                    generator=generator,
                                    guidance_scale=image_set.guidance_scale, 
                                    num_inference_steps=image_set.sampler_steps,
-                                   num_images_per_prompt=num_batch,
-                                   safety_checker=None).images
+                                   num_images_per_prompt=num_batch).images
 
             for idx in range(num_batch):
                 save_image_fun(image_set, idx, needed_filenames[idx], images[idx])
@@ -137,7 +136,7 @@ if __name__ == "__main__":
             for prompt in ["photo of a cute dog", "color pencil sketch of a cute dog"]:
                 image_set = ImageSet(prompt, dirname, model_str=model_name,
                                      sampler_str=sampler_str,
-                                     num_images=10)
+                                     num_images=1)
                 image_sets.append(image_set)
 
 
