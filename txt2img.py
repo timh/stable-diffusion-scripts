@@ -4,14 +4,15 @@ import os
 import sys
 import torch
 import PIL
-from diffusers import StableDiffusionPipeline, VersatileDiffusionTextToImagePipeline
-from diffusers import EulerAncestralDiscreteScheduler, DDIMScheduler, EulerDiscreteScheduler, DPMSolverMultistepScheduler, KarrasVeScheduler, ScoreSdeVeScheduler
+from diffusers import StableDiffusionPipeline
+from diffusers import DDIMScheduler, EulerDiscreteScheduler # works for SD2
+from diffusers import EulerAncestralDiscreteScheduler, DPMSolverMultistepScheduler, KarrasVeScheduler, ScoreSdeVeScheduler # doesn't work for SD2
 
 SCHEDULERS = {
     'ddim': DDIMScheduler,                      # ddim:50 works for SD2
-    'euler_a': EulerAncestralDiscreteScheduler, # euler_a:50 generates noise for SD2
-    'euler': EulerDiscreteScheduler,            # euler:50 works
-    'dpm': DPMSolverMultistepScheduler,         # dpm:50 generates noise
+    'euler': EulerDiscreteScheduler,            # euler:50 works for SD2
+    'euler_a': EulerAncestralDiscreteScheduler, # BUG euler_a:50 generates noise for SD2
+    'dpm': DPMSolverMultistepScheduler,         # BUG dpm:50 generates noise for SD2
 }
 
 class ImageSet:
@@ -29,16 +30,28 @@ class ImageSet:
     seed: int
 
     def __init__(self,
-                 model_dir: str, model_str: str, prompt: str, 
-                 output_dir: str = ".", sampler_name: str = "ddim", sampler_steps: int = 30,
+                 prompt: str, model_dir: str, model_str: str = "",
+                 output_dir: str = ".", 
+                 sampler_str: str = "ddim:30",
                  guidance_scale: float = 7, num_images: int = 1, seed: int = -1):
         self.model_dir = model_dir
+
+        if not model_str and model_dir:
+            path_components = model_dir.split("/")
+            last_component = path_components[-1]
+            if len(path_components) >= 2 and all(last_component, lambda c: c.isdigit()):
+                model_steps = last_component
+                model_name = path_components[-2]
+                model_str = f"{model_name}_{model_steps}"
+            else:
+                model_str = last_component
+
         self.model_str = model_str
         self.prompt = prompt
 
         self.output_dir = output_dir
-        self.sampler_name = sampler_name
-        self.sampler_steps = sampler_steps
+        self.sampler_name, self.sampler_steps = sampler_str.split(":")
+        self.sampler_steps = int(self.sampler_steps)
         self.guidance_scale = guidance_scale
         self.num_images = num_images
         self.seed = seed
@@ -64,7 +77,7 @@ class ImageGenerator:
                     save_image_fun: Callable[[ImageSet, int, str, PIL.Image.Image], None] = None):
 
         def _filename(image_set: ImageSet, idx: int) -> str:
-            output_dir = f"{image_set.output_dir}/{image_set.model_str}-{image_set.prompt}-{image_set.sampler_name}_{image_set.sampler_steps}"
+            output_dir = f"{image_set.output_dir}/{image_set.model_str}--{image_set.prompt}--{image_set.sampler_name}_{image_set.sampler_steps}"
             os.makedirs(output_dir, exist_ok=True)
             filename = f"{output_dir}/{idx:010}.{idx + 1:02}.png"
             return filename
@@ -100,11 +113,11 @@ class ImageGenerator:
             seed = image_set.seed + num_existing
             generator = torch.Generator("cuda").manual_seed(seed)
             images = self.pipeline(image_set.prompt, 
-                                    generator=generator,
-                                    guidance_scale=image_set.guidance_scale, 
-                                    num_inference_steps=image_set.sampler_steps,
-                                    num_images_per_prompt=num_batch,
-                                    safety_checker=None).images
+                                   generator=generator,
+                                   guidance_scale=image_set.guidance_scale, 
+                                   num_inference_steps=image_set.sampler_steps,
+                                   num_images_per_prompt=num_batch,
+                                   safety_checker=None).images
 
             for idx in range(num_batch):
                 save_image_fun(image_set, idx, needed_filenames[idx], images[idx])
@@ -115,14 +128,17 @@ class ImageGenerator:
 
 if __name__ == "__main__":
     image_sets = []
-    for model_name in ['stable-diffusion-2', 'stable-diffusion-v1-5']:
-        dirname = f"/home/tim/devel/{model_name}"
-
-        for sampler in ['euler', 'ddim']:
-            image_set = ImageSet(dirname, model_name, "photo of a dog sitting on a table", 
-                                sampler_name=sampler, sampler_steps=30,
-                                num_images=7)
-            image_sets.append(image_set)
+    models = {
+        'sd2': "/home/tim/devel/stable-diffusion-2",
+        'sd15': "/home/tim/devel/stable-diffusion-v1-5",
+    }
+    for model_name, dirname in models.items():
+        for sampler_str in ['euler:50', 'ddim:30']:
+            for prompt in ["photo of a dog sitting on a table", "color pencil sketch of a cute dog"]:
+                image_set = ImageSet(prompt, dirname, model_str=model_name,
+                                     sampler_str=sampler_str,
+                                     num_images=10)
+                image_sets.append(image_set)
 
 
     gen = ImageGenerator()
