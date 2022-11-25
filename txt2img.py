@@ -66,7 +66,7 @@ class ImageGenerator:
         def _filename(image_set: ImageSet, idx: int) -> str:
             output_dir = f"{image_set.output_dir}/{image_set.model_str}-{image_set.prompt}-{image_set.sampler_name}_{image_set.sampler_steps}"
             os.makedirs(output_dir, exist_ok=True)
-            filename = f"{output_dir}/{idx:10}.{idx + 1:02}.png"
+            filename = f"{output_dir}/{idx:010}.{idx + 1:02}.png"
             return filename
 
         def _save_image(image_set: ImageSet, idx: int, filename: str, image: PIL.Image.Image):
