@@ -6,18 +6,16 @@ RUN apt update
 RUN apt install -y zsh tmux emacs-nox vim curl git-core openssh-server rsync git-lfs zip
 RUN apt install -y python3-pip python3-pycuda python3.10-venv
 
-# RUN curl https://repo.anaconda.com/archive/Anaconda3-2022.10-Linux-x86_64.sh > /usr/anaconda.bash
-# https://repo.anaconda.com/archive/Anaconda3-2022.10-Linux-x86_64.sh
-COPY anaconda.bash /tmp
-RUN (echo ""; echo "yes"; echo "/opt/anaconda3"; echo "yes") | bash /tmp/anaconda.bash
-RUN rm /tmp/anaconda.bash
-ENV PATH=/opt/anaconda3/bin:$PATH
+# RUN curl https://repo.anaconda.com/miniconda/Miniconda3-py39_4.12.0-Linux-x86_64.sh > miniconda.bash
+COPY miniconda.bash /tmp
+RUN (echo ""; echo "yes"; echo "/opt/miniconda"; echo "yes") | bash /tmp/miniconda.bash
+RUN rm /tmp/miniconda.bash
+ENV PATH=/opt/miniconda/bin:$PATH
 RUN conda install pip
 
 # class images for dreambooth training
 WORKDIR /workspace
 RUN git clone https://github.com/JoePenna/Stable-Diffusion-Regularization-Images class_images
-
 
 # RUN pip install jupyterlab
 
@@ -34,10 +32,10 @@ RUN git clone https://github.com/huggingface/diffusers
 RUN conda create -n diffusers2
 ENV PATH=/opt/anaconda3/envs/diffusers2/bin:$PATH
 ENV CONDA_DEFAULT_ENV=diffusers2
-RUN conda install pip
+RUN conda install pip -c conda-forge
 
 WORKDIR /workspace/diffusers
-RUN conda install pytorch torchvision transformers -c nvidia && \
+RUN conda install pytorch torchvision transformers -c conda-forge -c nvidia && \
     pip install accelerate && \
     pip install -e .
 
