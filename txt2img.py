@@ -39,7 +39,7 @@ class ImageSet:
         if not model_str and model_dir:
             path_components = model_dir.split("/")
             last_component = path_components[-1]
-            if len(path_components) >= 2 and all(last_component, lambda c: c.isdigit()):
+            if len(path_components) >= 2 and all([c.isdigit() for c in last_component]):
                 model_steps = last_component
                 model_name = path_components[-2]
                 model_str = f"{model_name}_{model_steps}"
@@ -77,7 +77,7 @@ class ImageGenerator:
                     save_image_fun: Callable[[ImageSet, int, str, PIL.Image.Image], None] = None):
 
         def _filename(image_set: ImageSet, idx: int) -> str:
-            output_dir = f"{image_set.output_dir}/{image_set.model_str}--{image_set.prompt}--{image_set.sampler_name}_{image_set.sampler_steps}"
+            output_dir = f"{image_set.output_dir}/{image_set.model_str}--{image_set.prompt}--{image_set.sampler_name}_{image_set.sampler_steps}--c{image_set.guidance_scale:02}"
             os.makedirs(output_dir, exist_ok=True)
             filename = f"{output_dir}/{idx:010}.{idx + 1:02}.png"
             return filename

@@ -2,9 +2,9 @@ FROM ubuntu:jammy-20221101
 
 COPY tmux.conf /root/.tmux.conf
 
-RUN apt update
-RUN apt install -y zsh tmux emacs-nox vim curl git-core openssh-server rsync git-lfs zip
-RUN apt install -y python3-pip python3-pycuda python3.10-venv
+RUN apt-get update
+RUN apt-get install -y zsh tmux emacs-nox vim curl git-core openssh-server rsync git-lfs zip
+#RUN apt-get install -y python3-pip python3-pycuda python3.10-venv
 
 # RUN curl https://repo.anaconda.com/miniconda/Miniconda3-py39_4.12.0-Linux-x86_64.sh > miniconda.bash
 COPY miniconda.bash /tmp
@@ -30,12 +30,12 @@ RUN git clone https://github.com/JoePenna/Stable-Diffusion-Regularization-Images
 WORKDIR /workspace
 RUN git clone https://github.com/huggingface/diffusers
 RUN conda create -n diffusers2
-ENV PATH=/opt/anaconda3/envs/diffusers2/bin:$PATH
+ENV PATH=/opt/miniconda/envs/diffusers2/bin:$PATH
 ENV CONDA_DEFAULT_ENV=diffusers2
-RUN conda install pip -c conda-forge
+RUN conda install pip
 
 WORKDIR /workspace/diffusers
-RUN conda install pytorch torchvision transformers -c conda-forge -c nvidia && \
+RUN conda install pytorch torchvision transformers -c nvidia && \
     pip install accelerate && \
     pip install -e .
 
@@ -49,7 +49,7 @@ RUN conda install pytorch torchvision transformers -c conda-forge -c nvidia && \
 # WORKDIR /workspace
 # RUN git clone https://github.com/invoke-ai/InvokeAI
 # WORKDIR /workspace/InvokeAI
-# RUN apt install -y libgl-dev
+# RUN apt-get install -y libgl-dev
 # RUN cp environments-and-requirements/requirements-lin-cuda.txt requirements.txt
 # RUN python3 -mvenv /venvs/invokeai
 # RUN /venvs/invokeai/bin/pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 --extra-index-url https://download.pytorch.org/whl/cu116
