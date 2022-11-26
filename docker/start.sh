@@ -4,7 +4,7 @@ if [[ $HUGGINGFACE_TOKEN ]]
 then
     umask 0077
     mkdir -p ~/.huggingface
-    echo "$HUGGINGFACE_TOKEN" > ~/.huggingface/token
+    echo -n "$HUGGINGFACE_TOKEN" > ~/.huggingface/token
     git config --global credential.helper store
 fi
 
