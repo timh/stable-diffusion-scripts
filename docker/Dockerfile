@@ -4,6 +4,7 @@ COPY tmux.conf /root/.tmux.conf
 
 RUN apt-get update
 RUN apt-get install -y zsh tmux emacs-nox vim curl git-core openssh-server rsync git-lfs zip
+RUN apt-get install -y nvidia-kernel-common-515-server nvidia-utils-515-server nvidia-dkms-515-server nvidia-compute-utils-515-server
 #RUN apt-get install -y python3-pip python3-pycuda python3.10-venv
 
 # RUN curl https://repo.anaconda.com/miniconda/Miniconda3-py39_4.12.0-Linux-x86_64.sh > miniconda.bash
@@ -35,9 +36,11 @@ ENV CONDA_DEFAULT_ENV=diffusers2
 RUN conda install pip
 
 WORKDIR /workspace/diffusers
-RUN conda install pytorch torchvision transformers -c nvidia && \
+RUN conda install pytorch torchvision pytorch-cuda=11.6 transformers -c pytorch -c nvidia && \
     pip install accelerate && \
     pip install -e .
+
+RUN conda clean -a -y && conda clean -f -y
 
 # WORKDIR /workspace
 # RUN python3 -mvenv /venvs/diffusers

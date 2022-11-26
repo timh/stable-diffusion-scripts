@@ -51,6 +51,7 @@ unset __conda_setup
 
 # make sure pytorch can find the cuda libraries
 export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu
+export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
 
 alias db="conda activate diffusers2 && cd /workspace/diffusers/examples/dreambooth"
 alias s="conda activate diffusers2 && cd /scripts"
