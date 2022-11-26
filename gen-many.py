@@ -20,7 +20,7 @@ def gen_renders(config: argparse.Namespace):
             for sampler in config.samplers:
                 for cfg in config.cfgs:
                     one = ImageSet(output_dir=config.output_dir, prompt=prompt, model_dir=model, sampler_str=sampler, guidance_scale=cfg,
-                                    seed=config.seed, num_images=config.num_images)
+                                    seed=config.base_seed, num_images=config.num_images)
                     yield one
 
 def gen(image_gen: txt2img.ImageGenerator, config: argparse.Namespace):
