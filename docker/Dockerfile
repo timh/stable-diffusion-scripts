@@ -19,19 +19,6 @@ WORKDIR /workspace
 RUN git clone https://github.com/JoePenna/Stable-Diffusion-Regularization-Images class_images
 
 
-RUN chsh -s /bin/zsh root
-RUN bash -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-RUN ln -s /usr/share/zoneinfo/US/Pacific /etc/localtime
-RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
-RUN git lfs install
-RUN mkdir -p /workspace/outputs
-
-# the default theme 'robbyrussell' messes up in redraw with long command lines
-# and tmux. change to a multiline one.
-COPY zshrc /root/.zshrc
-RUN mkdir -p /root/.cache/huggingface/accelerate/
-COPY cache--huggingface--accelerate--default_config.yml /root/.cache/huggingface/accelerate/default_config.yaml
-
 # RUN pip install jupyterlab
 
 # WORKDIR /workspace
@@ -71,9 +58,22 @@ RUN conda install pytorch torchvision transformers -c nvidia && \
 # RUN /venvs/invokeai/bin/pip install "test-tube>=0.7.5"
 # RUN /venvs/invokeai/bin/pip install -r requirements.txt
 
+RUN chsh -s /bin/zsh root
+RUN bash -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+RUN ln -s /usr/share/zoneinfo/US/Pacific /etc/localtime
+RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
+RUN git lfs install
+RUN mkdir -p /workspace/outputs
+
 WORKDIR /workspace
 RUN git clone https://github.com/timh/stable-diffusion-scripts scripts
 RUN ln -s /workspace/scripts /scripts
+
+# the default theme 'robbyrussell' messes up in redraw with long command lines
+# and tmux. change to a multiline one.
+COPY zshrc /root/.zshrc
+RUN mkdir -p /root/.cache/huggingface/accelerate/
+COPY cache--huggingface--accelerate--default_config.yml /root/.cache/huggingface/accelerate/default_config.yaml
 
 EXPOSE 22
 
