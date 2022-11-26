@@ -2,7 +2,7 @@
 
 if [[ $HUGGINGFACE_TOKEN ]]
 then
-    umask 0700
+    umask 0077
     mkdir -p ~/.huggingface
     echo "$HUGGINGFACE_TOKEN" > ~/.huggingface/token
     git config --global credential.helper store
@@ -10,7 +10,7 @@ fi
 
 if [[ $PUBLIC_KEY ]]
 then
-    umask 0700
+    umask 0077
     mkdir -p ~/.ssh
     echo $PUBLIC_KEY >> ~/.ssh/authorized_keys
 

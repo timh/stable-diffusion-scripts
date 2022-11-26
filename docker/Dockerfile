@@ -16,45 +16,53 @@ RUN echo "export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu" >> ~/.zshrc
 RUN sed -i -e s/robbyrussell/pmcgee/g ~/.zshrc
 
 RUN git lfs install
-RUN pip install jupyterlab
 
 RUN mkdir -p /workspace/outputs
 RUN mkdir -p /workspace/models
-RUN mkdir /venvs
 
-RUN mkdir -p /root/.cache/huggingface/accelerate/
-COPY cache--huggingface--accelerate--default_config.yml /root/.cache/huggingface/accelerate/default_config.yaml
+# RUN curl https://repo.anaconda.com/archive/Anaconda3-2022.10-Linux-x86_64.sh > /usr/anaconda.bash
+# https://repo.anaconda.com/archive/Anaconda3-2022.10-Linux-x86_64.sh
+COPY anaconda.bash /tmp
+RUN (echo ""; echo "yes"; echo "/opt/anaconda3"; echo "yes") | bash /tmp/anaconda.bash
+RUN rm /tmp/anaconda.bash
 
-WORKDIR /workspace
-RUN git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui
-WORKDIR /workspace/stable-diffusion-webui
-RUN pip install -r requirements.txt
+# RUN pip install jupyterlab
 
-WORKDIR /workspace
-RUN git clone https://github.com/ShivamShrirao/diffusers
-WORKDIR /workspace/diffusers
-RUN python3 -mvenv /venvs/diffusers
-RUN /venvs/diffusers/bin/pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 --extra-index-url https://download.pytorch.org/whl/cu116
-RUN /venvs/diffusers/bin/pip install git+https://github.com/ShivamShrirao/diffusers.git
-RUN /venvs/diffusers/bin/pip install -r examples/dreambooth/requirements.txt
-RUN /venvs/diffusers/bin/pip install bitsandbytes
+# RUN mkdir /venvs
 
-WORKDIR /workspace
-RUN git clone https://github.com/invoke-ai/InvokeAI
-WORKDIR /workspace/InvokeAI
-RUN apt install -y libgl-dev
-RUN cp environments-and-requirements/requirements-lin-cuda.txt requirements.txt
-RUN python3 -mvenv /venvs/invokeai
-RUN /venvs/invokeai/bin/pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 --extra-index-url https://download.pytorch.org/whl/cu116
-RUN /venvs/invokeai/bin/pip install "test-tube>=0.7.5"
-RUN /venvs/invokeai/bin/pip install -r requirements.txt
+# RUN mkdir -p /root/.cache/huggingface/accelerate/
+# COPY cache--huggingface--accelerate--default_config.yml /root/.cache/huggingface/accelerate/default_config.yaml
 
-WORKDIR /workspace
-RUN git clone https://github.com/timh/stable-diffusion-scripts scripts
-RUN ln -s /workspace/scripts /scripts
+# WORKDIR /workspace
+# RUN git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui
+# WORKDIR /workspace/stable-diffusion-webui
+# RUN pip install -r requirements.txt
 
-WORKDIR /workspace
-RUN git clone https://github.com/JoePenna/Stable-Diffusion-Regularization-Images class_images
+# WORKDIR /workspace
+# RUN git clone https://github.com/ShivamShrirao/diffusers
+# WORKDIR /workspace/diffusers
+# RUN python3 -mvenv /venvs/diffusers
+# RUN /venvs/diffusers/bin/pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 --extra-index-url https://download.pytorch.org/whl/cu116
+# RUN /venvs/diffusers/bin/pip install git+https://github.com/ShivamShrirao/diffusers.git
+# RUN /venvs/diffusers/bin/pip install -r examples/dreambooth/requirements.txt
+# RUN /venvs/diffusers/bin/pip install bitsandbytes
+
+# WORKDIR /workspace
+# RUN git clone https://github.com/invoke-ai/InvokeAI
+# WORKDIR /workspace/InvokeAI
+# RUN apt install -y libgl-dev
+# RUN cp environments-and-requirements/requirements-lin-cuda.txt requirements.txt
+# RUN python3 -mvenv /venvs/invokeai
+# RUN /venvs/invokeai/bin/pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 --extra-index-url https://download.pytorch.org/whl/cu116
+# RUN /venvs/invokeai/bin/pip install "test-tube>=0.7.5"
+# RUN /venvs/invokeai/bin/pip install -r requirements.txt
+
+# WORKDIR /workspace
+# RUN git clone https://github.com/timh/stable-diffusion-scripts scripts
+# RUN ln -s /workspace/scripts /scripts
+
+# WORKDIR /workspace
+# RUN git clone https://github.com/JoePenna/Stable-Diffusion-Regularization-Images class_images
 
 EXPOSE 22
 
