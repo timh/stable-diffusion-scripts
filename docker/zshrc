@@ -53,3 +53,4 @@ unset __conda_setup
 export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu
 
 alias db="conda activate diffusers2 && cd /workspace/diffusers/examples/dreambooth"
+alias s="conda activate diffusers2 && cd /scripts"
