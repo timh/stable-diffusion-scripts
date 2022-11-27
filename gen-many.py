@@ -1,3 +1,4 @@
+import sys
 import os
 import os.path
 import re
@@ -5,7 +6,7 @@ import subprocess
 import argparse
 import shlex
 import time
-from collections import namedtuple
+from collections import namedtuple, deque
 from typing import List
 
 import txt2img
@@ -33,29 +34,6 @@ def gen(image_gen: txt2img.ImageGenerator, config: argparse.Namespace):
         with open(time_filename, "w") as file:
             file.write(f"{time_end - time_start}\n")
 
-class LoadFromFile (argparse.Action):
-    def __call__ (self, parser, config, values, option_string = None):
-        with values as file:
-            import copy
-
-            old_actions = parser._actions
-            old_required = {a.dest : a.required for a in old_actions}
-            file_actions = copy.deepcopy(old_actions)
-
-            # make none of the args required so we can get thru reading the file in
-            # parser.parse_args, below.
-            for act in file_actions:
-                act.required = False
-
-            parser._actions = file_actions
-            parser.parse_args(shlex.split(file.read(), comments=True), config)
-
-            # make any still-missing args required again, so we error out.
-            for act in file_actions:
-                if getattr(config, act.dest, None) is None:
-                    act.required = old_required[act.dest]
-            # parser._actions = old_actions
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="gen many sample images")
     parser.add_argument("-p", "--prompt", dest='prompts', nargs='+', action='append', required=True)
@@ -66,9 +44,23 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", dest='base_seed', type=int, default=0)
     parser.add_argument("--cfg", dest='cfgs', nargs='+', action='append', help="guidance scale")
     parser.add_argument("--batch", dest='batch_size', type=int, default=1, help="num images to generate in parallel")
-    parser.add_argument("-f", "--filename", type=open, action=LoadFromFile)
+    parser.add_argument("-f", dest="filename", help="read command line arguments from file") # dummy so the help shows this argument
 
-    config = parser.parse_args()
+    # support loading from a file with "-f filename". using parser.add_argument for
+    # loading arguments is cumbersome and doesn't work great, so the above 
+    # parser.add_argument("-f"...) is just to get the help text.
+    config_args = []
+    args = deque(sys.argv[1:])
+    while len(args) > 0:
+        arg = args.popleft()
+        if arg == "-f":
+            filename = args.popleft()
+            with open(filename, "r") as file:
+                config_args.extend(shlex.split(file.read(), comments=True))
+            continue
+        config_args.append(arg)
+
+    config = parser.parse_args(config_args)
     if config.cfgs is None:
         config.cfgs = [["7"]]
     if config.samplers is None:
