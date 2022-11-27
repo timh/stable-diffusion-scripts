@@ -1,46 +1,40 @@
-FROM ubuntu:jammy-20221101
+FROM continuumio/miniconda3:latest
+#FROM ubuntu:jammy-20221101
 
-COPY tmux.conf /root/.tmux.conf
-
-RUN apt-get update
-RUN apt-get install -y zsh tmux emacs-nox vim curl git-core openssh-server rsync git-lfs zip
-RUN apt-get install -y nvidia-kernel-common-515-server nvidia-utils-515-server nvidia-dkms-515-server nvidia-compute-utils-515-server
+RUN apt-get update && \
+    apt-get install -y zsh tmux emacs-nox vim curl git-core openssh-server rsync git-lfs zip less locales && \
+    /opt/conda/bin/conda update -n base -c defaults conda
+#RUN apt-get install -y nvidia-kernel-common-510-server nvidia-utils-510-server nvidia-dkms-510-server nvidia-compute-utils-510-server
+#RUN apt-get install -y nvidia-utils-510-server nvidia-compute-utils-510-server
 #RUN apt-get install -y python3-pip python3-pycuda python3.10-venv
 
-# RUN curl https://repo.anaconda.com/miniconda/Miniconda3-py39_4.12.0-Linux-x86_64.sh > miniconda.bash
-COPY miniconda.bash /tmp
-RUN (echo ""; echo "yes"; echo "/opt/miniconda"; echo "yes") | bash /tmp/miniconda.bash
-RUN rm /tmp/miniconda.bash
-ENV PATH=/opt/miniconda/bin:$PATH
-RUN conda install pip
-
-# class images for dreambooth training
-WORKDIR /workspace
-RUN git clone https://github.com/JoePenna/Stable-Diffusion-Regularization-Images class_images
-
-# RUN pip install jupyterlab
-
-# WORKDIR /workspace
-# RUN git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui
-# WORKDIR /workspace/stable-diffusion-webui
-# RUN pip install -r requirements.txt
-
-##### 
+#####
 # diffusers
 ##### 
-WORKDIR /workspace
-RUN git clone https://github.com/huggingface/diffusers
-RUN conda create -n diffusers2
-ENV PATH=/opt/miniconda/envs/diffusers2/bin:$PATH
-ENV CONDA_DEFAULT_ENV=diffusers2
-RUN conda install pip
-
+ENV PATH=/opt/conda/envs/diffusers/bin:$PATH
+RUN git clone https://github.com/ShivamShrirao/diffusers /workspace/diffusers && \
+    conda create -n diffusers && \
+    conda install pip
+    
+ENV CONDA_DEFAULT_ENV=diffusers
 WORKDIR /workspace/diffusers
-RUN conda install pytorch torchvision pytorch-cuda=11.6 transformers -c pytorch -c nvidia && \
+#RUN --mount=type=cache,target=/opt/conda/envs,id=conda_diffusers \
+RUN conda install pip pytorch torchvision pytorch-cuda=11.6 transformers -c pytorch -c nvidia && \
     pip install accelerate && \
     pip install -e .
 
-RUN conda clean -a -y && conda clean -f -y
+
+# # class images for dreambooth training
+# WORKDIR /workspace
+# RUN git clone https://github.com/JoePenna/Stable-Diffusion-Regularization-Images class_images
+
+# # RUN pip install jupyterlab
+
+# # WORKDIR /workspace
+# # RUN git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui
+# # WORKDIR /workspace/stable-diffusion-webui
+# # RUN pip install -r requirements.txt
+
 
 # WORKDIR /workspace
 # RUN python3 -mvenv /venvs/diffusers
@@ -59,22 +53,21 @@ RUN conda clean -a -y && conda clean -f -y
 # RUN /venvs/invokeai/bin/pip install "test-tube>=0.7.5"
 # RUN /venvs/invokeai/bin/pip install -r requirements.txt
 
-RUN chsh -s /bin/zsh root
-RUN bash -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-RUN ln -s /usr/share/zoneinfo/US/Pacific /etc/localtime
-RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
-RUN git lfs install
-RUN mkdir -p /workspace/outputs
-
-WORKDIR /workspace
-RUN git clone https://github.com/timh/stable-diffusion-scripts scripts
-RUN ln -s /workspace/scripts /scripts
+RUN chsh -s /bin/zsh root && \
+    bash -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" && \
+    git lfs install && \
+    mkdir -p /workspace/outputs && \
+    git clone https://github.com/timh/stable-diffusion-scripts /workspace/scripts && \
+    ln -s /workspace/scripts /scripts
 
 # the default theme 'robbyrussell' messes up in redraw with long command lines
 # and tmux. change to a multiline one.
+COPY tmux.conf /root/.tmux.conf
 COPY zshrc /root/.zshrc
-RUN mkdir -p /root/.cache/huggingface/accelerate/
 COPY cache--huggingface--accelerate--default_config.yml /root/.cache/huggingface/accelerate/default_config.yaml
+RUN ln -sf /usr/share/zoneinfo/US/Pacific /etc/localtime && \
+    echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
+    mkdir -p /root/.cache/huggingface/accelerate/
 
 EXPOSE 22
 
