@@ -49,9 +49,11 @@ def generate_css():
 
 def find_pngs():
     #alex34_06500-photo of alexhin person, full body, pencil sketch-k_heun_50
-    re_dirname = re.compile(r"(.+[\d_]+)--(.+)--([\w_]+_\d+( [c\d]+)?)")
+    re_dirname = re.compile(r"(.+[\d_]+)--(.+)--([\w\d_,]+)")
     re_dirname_old = re.compile(r"(.+[\d_]+)-(.+)-([\w_]+_\d+( [c\d]+)?)")
     re_png_invokeai = re.compile(r"(\d+).(\d+)\.png")
+
+    re_sampler_cfg = re.compile(r"([\w_]+)_(\d+),c(\d+)")
 
     #alexhin20_f222_5e7_r7_05500
     re_model_str = re.compile(r"([\w\d\._-]+)_r(\d+)_(\d+)")
@@ -83,6 +85,10 @@ def find_pngs():
         model_str = match.group(1)
         prompt = match.group(2)
         sampler = match.group(3)
+        match_sampler = re_sampler_cfg.match(sampler)
+        if match_sampler:
+            sname, ssteps, cfg = match_sampler.group(1), int(match_sampler.group(2)), int(match_sampler.group(3))
+            sampler = f"{sname} {ssteps:02}, c{cfg:02}"
         
         #prompt_safe = prompt.replace(" ", "_").replace(",", "-").replace("+","P")
 
@@ -98,8 +104,9 @@ def find_pngs():
                 continue
             seed = int(match.group(2))
 
-            # normalize 'alexhin person' to 'alexhin'
+            # normalize 'alexhin person' and 'alexhin woman' to 'alexhin'
             prompt = prompt.replace("alexhin person", "alexhin")
+            prompt = prompt.replace("alexhin woman", "alexhin")
 
             match = re_model_str.match(model_str)
             if match:

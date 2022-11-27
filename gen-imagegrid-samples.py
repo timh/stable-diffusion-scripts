@@ -28,6 +28,8 @@ if __name__ == "__main__":
 
             samples_dir = f"{steps_dir}/samples"
             samples_dir_0 = f"{samples_dir}/0"
+            if not os.path.isdir(samples_dir):
+                continue
             if os.path.isdir(samples_dir_0):
                 samples_dir = samples_dir_0
             for sample in os.listdir(samples_dir):

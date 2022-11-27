@@ -139,7 +139,7 @@ def parse_args() -> Config:
     parser.add_argument("--instance_dir", default="/workspace/images.alex-24", help="instance images directory")
     parser.add_argument("--instance_prompt", default="photo of alexhin", help="instance prompt")
     parser.add_argument("--learning_rate", "--lr", "-l", default="1e-6", help="learning rate")
-    parser.add_argument("--lr_scheduler", default="constant", help="scheduler type: constant, linear, cosine")
+    parser.add_argument("--lr_scheduler", default="cosine", help="scheduler type: constant, linear, cosine")
     parser.add_argument("--seeds", "-S", default="1", help="random seeds (comma separated for multiple)")
     parser.add_argument("--steps", "-s", dest='max_train_steps', type=int, required=True, default=2000, help="number of training steps")
     parser.add_argument("--model", dest='input_model_name', default="runwayml/stable-diffusion-v1-5", help="name or path for base model")

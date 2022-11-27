@@ -77,7 +77,7 @@ class ImageGenerator:
                     save_image_fun: Callable[[ImageSet, int, str, PIL.Image.Image], None] = None):
 
         def _filename(image_set: ImageSet, idx: int) -> str:
-            output_dir = f"{image_set.output_dir}/{image_set.model_str}--{image_set.prompt}--{image_set.sampler_name}_{image_set.sampler_steps}--c{image_set.guidance_scale:02}"
+            output_dir = f"{image_set.output_dir}/{image_set.model_str}--{image_set.prompt}--{image_set.sampler_name}_{image_set.sampler_steps},c{image_set.guidance_scale:02}"
             os.makedirs(output_dir, exist_ok=True)
             filename = f"{output_dir}/{idx:010}.{idx + 1:02}.png"
             return filename
@@ -91,6 +91,18 @@ class ImageGenerator:
         if save_image_fun is None:
             save_image_fun = _save_image
 
+        filenames = [filename_func(image_set, idx) for idx in range(image_set.num_images)]
+        needed_filenames = [filename for filename in filenames if filename is None or not os.path.exists(filename)]
+        if len(needed_filenames) == 0:
+            return
+        
+        if needed_filenames[0] is not None:
+            output_dir = os.path.dirname(needed_filenames[0])
+            output_dir = output_dir.split('/')[-1]
+        else:
+            output_dir = ""
+        print(f"\033[1;32m{output_dir}\033[0m: {len(needed_filenames)} to generate")
+
         # re-create scheduler/pipeline only when the sampler or model changes.
         if image_set.sampler_name != self.last_sampler_name or image_set.model_dir != self.last_model_dir:
             self.scheduler = image_set.scheduler_class.from_pretrained(image_set.model_dir, subfolder="scheduler")
@@ -100,9 +112,6 @@ class ImageGenerator:
             self.pipeline = self.pipeline.to("cuda")
             self.last_model_dir = image_set.model_dir
         self.pipeline.scheduler = self.scheduler
-
-        filenames = [filename_func(image_set, idx) for idx in range(image_set.num_images)]
-        needed_filenames = [filename for filename in filenames if filename is None or not os.path.exists(filename)]
 
         while len(needed_filenames) > 0:
             num_needed = len(needed_filenames)
