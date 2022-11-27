@@ -11,37 +11,27 @@ RUN apt-get update && \
 #####
 # diffusers
 ##### 
-ENV PATH=/opt/conda/envs/diffusers/bin:$PATH
+
 RUN git clone https://github.com/ShivamShrirao/diffusers /workspace/diffusers && \
-    conda create -n diffusers && \
-    conda install pip
-    
+    conda create -n diffusers
+
 ENV CONDA_DEFAULT_ENV=diffusers
+ENV PATH=/opt/conda/envs/diffusers/bin:$PATH
 WORKDIR /workspace/diffusers
 #RUN --mount=type=cache,target=/opt/conda/envs,id=conda_diffusers \
-RUN conda install pip pytorch torchvision pytorch-cuda=11.6 transformers -c pytorch -c nvidia && \
-    pip install accelerate && \
+RUN conda install pip pytorch torchvision pytorch-cuda=11.6 transformers jupyterlab -c pytorch -c nvidia && \
+    conda install xformers -c xformers/label/dev && \
+    pip install accelerate bitsandbytes tensorboard && \
     pip install -e .
 
-
-# # class images for dreambooth training
-# WORKDIR /workspace
-# RUN git clone https://github.com/JoePenna/Stable-Diffusion-Regularization-Images class_images
-
-# # RUN pip install jupyterlab
-
-# # WORKDIR /workspace
-# # RUN git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui
-# # WORKDIR /workspace/stable-diffusion-webui
-# # RUN pip install -r requirements.txt
-
+# class images for dreambooth training
+WORKDIR /workspace
+RUN git clone https://github.com/JoePenna/Stable-Diffusion-Regularization-Images class_images
 
 # WORKDIR /workspace
-# RUN python3 -mvenv /venvs/diffusers
-# RUN /venvs/diffusers/bin/pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 --extra-index-url https://download.pytorch.org/whl/cu116
-# RUN /venvs/diffusers/bin/pip install git+https://github.com/ShivamShrirao/diffusers.git
-# RUN /venvs/diffusers/bin/pip install -r examples/dreambooth/requirements.txt
-# RUN /venvs/diffusers/bin/pip install bitsandbytes
+# RUN git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui
+# WORKDIR /workspace/stable-diffusion-webui
+# RUN pip install -r requirements.txt
 
 # WORKDIR /workspace
 # RUN git clone https://github.com/invoke-ai/InvokeAI

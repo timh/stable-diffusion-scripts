@@ -19,4 +19,8 @@ then
     echo "SSH Service Started"
 fi
 
+conda activate diffusers
+jupyter-lab --allow-root --notebook-dir=/ >& /var/log/jupyter.log &
+tensorboard --logdir /workspace/outputs >& /var/log/tensorboard.log &
+
 sleep infinity
