@@ -1,0 +1,12 @@
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.webp
+**/*.psd
+**/*.html
+**/*.txt
+**/imagegrid.html
+**/.invoke_history
+**/invoke_log.*
+**/.DS_Store
+
