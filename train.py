@@ -53,10 +53,10 @@ class Config(argparse.Namespace):
             print(f"** nothing to do, max_train_steps is {max_train_steps}")
             return
 
-        train_py:str = "train_inpainting_dreambooth.py" if "inpainting" in self.input_model_name else "train_dreambooth.py"
+        dreambooth_py: str = "train_inpainting_dreambooth.py" if "inpainting" in self.input_model_name else "train_dreambooth.py"
         args = ["accelerate", "launch",
                 "--num_cpu_threads_per_process", "8",
-                train_py,
+                dreambooth_py,
                 "--output_dir", output_dir,
                 "--instance_data_dir", self.instance_dir,
                 "--instance_prompt", self.instance_prompt,
@@ -68,7 +68,7 @@ class Config(argparse.Namespace):
                 "--save_infer_steps=50",
                 "--seed", str(seed),
                 "--pretrained_model_name_or_path", input_model_name,
-                "--pretrained_vae_name_or_path=stabilityai/sd-vae-ft-mse",
+                #"--pretrained_vae_name_or_path=stabilityai/sd-vae-ft-mse",
                 "--with_prior_preservation",
                 "--prior_loss_weight=1.0",
                 "--resolution=512",
@@ -108,10 +108,10 @@ class Config(argparse.Namespace):
                 filename = f"{dirname}/train-cmdline.txt"
                 os.makedirs(dirname, exist_ok=True)
                 with open(filename, "w") as output:
-                    output.write(f"{train_py}:")
+                    output.write(f"{dreambooth_py}:\n")
                     output.write(f"# {args_to_quoted_str(args)}\n")
-                    output.write(f"#")
-                    output.write(f"train.py:")
+                    output.write(f"\n")
+                    output.write(f"train.py:\n")
                     output.write(f"# {args_to_quoted_str(sys.argv[1:])}\n")
         
         if prior_steps != 0:
@@ -151,13 +151,14 @@ def parse_args() -> Config:
     cfg = Config()
 
     # optional ~/.sdscripts.conf file including default arguments
-    config_args = []
     config_filename = os.path.join(os.environ["HOME"], ".sdscripts.conf")
     if os.path.exists(config_filename):
         with open(config_filename, "r") as config:
             config_args = shlex.split(config.read(), comments=True)
         print(f"read {args_to_quoted_str(config_args)}")
         config_args.extend(sys.argv[1:])
+    else:
+        config_args = sys.argv[1:]
     
     parser.parse_args(config_args, namespace=cfg)
     cfg.validate()
