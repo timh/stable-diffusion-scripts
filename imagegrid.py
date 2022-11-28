@@ -49,11 +49,11 @@ def generate_css():
 
 def find_pngs():
     #alex34_06500-photo of alexhin person, full body, pencil sketch-k_heun_50
-    re_dirname = re.compile(r"(.+[\d_]+)--(.+)--([\w\d_,]+)")
-    re_dirname_old = re.compile(r"(.+[\d_]+)-(.+)-([\w_]+_\d+( [c\d]+)?)")
+    re_dirname = re.compile(r"(.+[\d_]+)--(.+)--([\w\+\d_,]+)")
+    re_dirname_old = re.compile(r"(.+[\d_]+)-(.+)-([\w\+_]+_\d+( [c\d]+)?)")
     re_png_invokeai = re.compile(r"(\d+).(\d+)\.png")
 
-    re_sampler_cfg = re.compile(r"([\w_]+)_(\d+),c(\d+)")
+    re_sampler_cfg = re.compile(r"([\w\+_]+)_(\d+),c(\d+)")
 
     #alexhin20_f222_5e7_r7_05500
     re_model_str = re.compile(r"([\w\d\._-]+)_r(\d+)_(\d+)")

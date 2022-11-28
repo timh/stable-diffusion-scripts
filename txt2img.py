@@ -9,10 +9,15 @@ from diffusers import DDIMScheduler, EulerDiscreteScheduler # works for SD2
 from diffusers import EulerAncestralDiscreteScheduler, DPMSolverMultistepScheduler, KarrasVeScheduler, ScoreSdeVeScheduler # doesn't work for SD2
 
 SCHEDULERS = {
-    'ddim': DDIMScheduler,                      # ddim:50 works for SD2
-    'euler': EulerDiscreteScheduler,            # euler:50 works for SD2
-    'euler_a': EulerAncestralDiscreteScheduler, # BUG euler_a:50 generates noise for SD2
-    'dpm': DPMSolverMultistepScheduler,         # BUG dpm:50 generates noise for SD2
+       'ddim': lambda dirname: DDIMScheduler.from_pretrained(dirname, subfolder='scheduler'),
+      'euler': lambda dirname: EulerDiscreteScheduler.from_pretrained(dirname, subfolder='scheduler'),
+
+    'euler_a': lambda dirname: EulerAncestralDiscreteScheduler.from_pretrained(dirname, subfolder='scheduler'),
+        'dpm': lambda dirname: DPMSolverMultistepScheduler.from_pretrained(dirname, algorithm_type='dpmsolver', subfolder='scheduler'),
+       'dpm1': lambda dirname: DPMSolverMultistepScheduler.from_pretrained(dirname, algorithm_type='dpmsolver', solver_order=1, subfolder='scheduler'),
+       'dpm2': lambda dirname: DPMSolverMultistepScheduler.from_pretrained(dirname, algorithm_type='dpmsolver', solver_order=2, subfolder='scheduler'),
+     'dpm++1': lambda dirname: DPMSolverMultistepScheduler.from_pretrained(dirname, algorithm_type='dpmsolver++', solver_order=1, subfolder='scheduler'),
+     'dpm++2': lambda dirname: DPMSolverMultistepScheduler.from_pretrained(dirname, algorithm_type='dpmsolver++', solver_order=2, subfolder='scheduler'),
 }
 
 class ImageSet:
@@ -57,8 +62,8 @@ class ImageSet:
         self.seed = seed
 
         if self.sampler_name not in SCHEDULERS:
-            raise Exception(f"unknown scheduler '{self.scheduler_name}'")
-        self.scheduler_class = SCHEDULERS[self.sampler_name]()
+            raise Exception(f"unknown scheduler '{self.sampler_name}'")
+        self.scheduler_fun = SCHEDULERS[self.sampler_name]
 
 class ImageGenerator:
     pipeline = None
@@ -79,7 +84,7 @@ class ImageGenerator:
         def _filename(image_set: ImageSet, idx: int) -> str:
             output_dir = f"{image_set.output_dir}/{image_set.model_str}--{image_set.prompt}--{image_set.sampler_name}_{image_set.sampler_steps},c{image_set.guidance_scale:02}"
             os.makedirs(output_dir, exist_ok=True)
-            filename = f"{output_dir}/{idx:010}.{idx + 1:02}.png"
+            filename = f"{output_dir}/{idx + 1:02}.{image_set.seed + idx:010}.png"
             return filename
 
         def _save_image(image_set: ImageSet, idx: int, filename: str, image: PIL.Image.Image):
@@ -105,7 +110,7 @@ class ImageGenerator:
 
         # re-create scheduler/pipeline only when the sampler or model changes.
         if image_set.sampler_name != self.last_sampler_name or image_set.model_dir != self.last_model_dir:
-            self.scheduler = image_set.scheduler_class.from_pretrained(image_set.model_dir, subfolder="scheduler")
+            self.scheduler = image_set.scheduler_fun(image_set.model_dir)
             self.last_sampler_name = image_set.sampler_name
         if image_set.model_dir != self.last_model_dir:
             self.pipeline = StableDiffusionPipeline.from_pretrained(image_set.model_dir, revision="fp16", torch_dtype=torch.float16, safety_checker=None)
