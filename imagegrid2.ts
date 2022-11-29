@@ -3,8 +3,10 @@ class GImage {
     seed: number
 }
 
-var fields = ['modelName', 'modelSeed', 'modelSteps', 'prompt', 'sampler', 'samplerSteps', 'cfg']
+// var fields = ['modelName', 'modelSeed', 'modelSteps', 'prompt', 'sampler', 'samplerSteps', 'cfg']
+var fields = ['modelStr', 'prompt', 'sampler', 'samplerSteps', 'cfg']
 class GImageSet {
+    modelStr: string
     modelName: string
     modelSeed: number = 0
     modelSteps: number = 0
@@ -15,13 +17,25 @@ class GImageSet {
 
     images: Array<GImage> = []
 
-    getModelStr(): string {
+    // model string meant for human consumption.
+    getModelStrPretty(): string {
         return `${this.modelName} r${this.modelSeed} ${this.modelSteps}`
     }
 
     getKey(): string {
         var res = ""
-        fields.forEach((key) => {
+        var useFields = new Array<string>()
+        for (const field of fields) {
+            if (field == 'modelStr') {
+                useFields.push('modelName')
+                useFields.push('modelSeed')
+                useFields.push('modelSteps')
+            }
+            else {
+                useFields.push(field)
+            }
+        }
+        useFields.forEach((key) => {
             if (res) {
                 res += ", "
             }
@@ -84,9 +98,11 @@ function updateWithFilename(filename: string): void {
             iset.modelName = match[1]
             iset.modelSeed = parseInt(match[2])
             iset.modelSteps = parseInt(match[3])
+            iset.modelStr = iset.getModelStrPretty()
         }
         else {
             iset.modelName = modelStr
+            iset.modelStr = modelStr
         }
 
         var isetKey = iset.getKey()
@@ -173,10 +189,13 @@ async function updateList() {
                 imagesHTML += `  <img src="${img.filename}" class="thumbnail"/>\n`
                 imagesHTML += `  <span class="details">\n`
                 imagesHTML += `    <img src="${img.filename}" class="fullsize"/>\n`
-                imagesHTML += `    <p>seed ${img.seed}</p>\n`
-                imagesHTML += `    <p>modelName ${iset.modelName}</p>\n`
-                imagesHTML += `    <p>modelSeed ${iset.modelSeed}</p>\n`
-                imagesHTML += `    <p>modelSteps ${iset.modelSteps}</p>\n`
+                imagesHTML += `    <div class="details_grid">\n`
+                imagesHTML += `      <span class="detailsKey">model</span><span class="detailsVal">${iset.modelStr}</span>\n`
+                imagesHTML += `      <span class="detailsKey">prompt</span><span class="detailsVal">"${iset.prompt}"</span>\n`
+                imagesHTML += `      <span class="detailsKey">sampler</span><span class="detailsVal">${iset.sampler} ${iset.samplerSteps}</span>\n`
+                imagesHTML += `      <span class="detailsKey">CFG</span><span class="detailsVal">${iset.cfg}</span>\n`
+                imagesHTML += `      <span class="detailsKey">seed</span><span class="detailsVal">${img.seed}</span>\n`
+                imagesHTML += `    </div>\n`
                 imagesHTML += `  </span>\n`
                 imagesHTML += "</span>\n"
             }

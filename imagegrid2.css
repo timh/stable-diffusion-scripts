@@ -10,7 +10,7 @@
 }
 
 #imagegrid span.image:hover img.thumbnail {
-  visibility: hidden;
+  /* visibility: hidden; */
   position: absolute;
 }
 
@@ -35,4 +35,20 @@
   position: absolute;
   visibility: visible;
 }
+
+#imagegrid .details_grid {
+  display: grid;
+  grid-template-columns: max-content;
+  column-gap: 20px;
+}
+
+#imagegrid .details_grid .detailsKey {
+  grid-column: 1;
+}
+
+#imagegrid .details_grid .detailsVal {
+  grid-column: 2;
+  font-family:'Courier New', Courier, monospace;
+}
+
 
