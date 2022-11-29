@@ -3,10 +3,10 @@
 **/*.jpeg
 **/*.webp
 **/*.psd
-**/*.html
+*/*.html
 **/*.txt
 **/imagegrid.html
 **/.invoke_history
 **/invoke_log.*
 **/.DS_Store
-
+node_modules/**
