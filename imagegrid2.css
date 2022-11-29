@@ -11,7 +11,7 @@
 
 #imagegrid span.image:hover img.thumbnail {
   visibility: hidden;
-  position: fixed;
+  position: absolute;
 }
 
 #imagegrid span.image:hover span.details {
@@ -27,12 +27,12 @@
 }
 
 #imagegrid span.image span.details {
-  position: fixed;
+  position: absolute;
   visibility: hidden;
 }
 
 #imagegrid span.image:hover span.details {
-  position: fixed;
+  position: absolute;
   visibility: visible;
 }
 
