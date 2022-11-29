@@ -148,6 +148,7 @@ async function updateList() {
             grid.innerHTML += `<span style=${style}>${header.value}</span>\n`
         })
 
+        // generate row labels for all the seeds
         var allSeedsSet = new Set<number>()
         for (const iset of allImageSets.values()) {
             for (const img of iset.images) {
@@ -159,6 +160,21 @@ async function updateList() {
             var style = `"grid-row: ${idx + fields.length + 1}; grid-column: 1"`
             grid.innerHTML += `<span style=${style}>${seed}</span>`
         }
+
+        // do the images!
+        var imagesHTML = ""
+        for (const [isetIdx, setKey] of imageSetKeys.entries()) {
+            var iset = allImageSets.get(setKey) as GImageSet
+            var column = isetIdx + 2
+            for (const [imgIdx, img] of iset.images.entries()) {
+                var row = imgIdx + fields.length + 1
+                style = `"grid-row: ${row}; grid-column: ${column}"`
+                imagesHTML += `<span style=${style}>\n`
+                imagesHTML += `  <img src="${img.filename}" style="width: 128; height: 128"/>\n`
+                imagesHTML += "</span>\n"
+            }
+        }
+        grid.innerHTML += imagesHTML
     }
     else {
         console.log(`error`)
