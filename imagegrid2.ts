@@ -39,7 +39,7 @@ class GImageSet {
 }
 
 class ColumnHeader {
-    row: number = 2
+    row: number = 1
     columnStart: number
     columnEnd: number
     value: string = ""
@@ -51,14 +51,14 @@ class ColumnHeader {
     }
 }
 
-var imageSets = new Map<string, GImageSet>()
+var allImageSets = new Map<string, GImageSet>()
 
 const RE_FILENAME = /(.+[\d_]+)--(.+)--([\w\+\d_,]+)\/\d+\.(\d+)\.png/
 const RE_SAMPLER = /([\w\+_]+)_(\d+),c(\d+)/
 const RE_MODEL = /([\w\d\._-]+)_r(\d+)_(\d+)/
 
 function updateWithFilename(filename: string): void {
-    // modifies global variable 'imageSets'
+    // modifies global variable 'allImageSets'
     var match = RE_FILENAME.exec(filename)
     if (match) {
         var iset = new GImageSet()
@@ -90,11 +90,11 @@ function updateWithFilename(filename: string): void {
         }
 
         var isetKey = iset.getKey()
-        if (imageSets.has(isetKey)) {
-            iset = imageSets.get(isetKey) as GImageSet
+        if (allImageSets.has(isetKey)) {
+            iset = allImageSets.get(isetKey) as GImageSet
         }
         else {
-            imageSets.set(isetKey, iset)
+            allImageSets.set(isetKey, iset)
         }
 
         // add an image to the imageset.
@@ -108,13 +108,13 @@ function buildHeaders(imageSetKeys: string[]): ColumnHeader[] {
 
     // walk through image sets in order, building the columns out
     imageSetKeys.forEach((setKey) => {
-        var imgSet = imageSets.get(setKey)
+        var imgSet = allImageSets.get(setKey)
         
         for (const [idx, field] of fields.entries()) {
             var header = lastHeaders.get(field)
             if (header == null || header?.value != imgSet![field]) {
                 var column = (header != null) ? header.columnEnd : 2
-                header = new ColumnHeader(idx + 2, imgSet![field], column)
+                header = new ColumnHeader(idx + 1, imgSet![field], column)
                 lastHeaders.set(field, header)
                 allHeaders.push(header)
             }
@@ -134,9 +134,9 @@ async function updateList() {
             updateWithFilename(filename)
         })
 
-        var imageSetKeys = Array.from(imageSets.keys()).sort()
+        var imageSetKeys = Array.from(allImageSets.keys()).sort()
         imageSetKeys.forEach((setKey) => {
-            var val = imageSets.get(setKey)
+            var val = allImageSets.get(setKey)
             console.log(`${setKey} has ${val!.images.length}`)
         })
 
@@ -147,6 +147,18 @@ async function updateList() {
             var style = `"grid-row: ${header.row}; grid-column-start: ${header.columnStart}; grid-column-end: ${header.columnEnd}"`
             grid.innerHTML += `<span style=${style}>${header.value}</span>\n`
         })
+
+        var allSeedsSet = new Set<number>()
+        for (const iset of allImageSets.values()) {
+            for (const img of iset.images) {
+                allSeedsSet.add(img.seed)
+            }
+        }
+        var allSeeds = Array.from(allSeedsSet).sort()
+        for (const [idx, seed] of allSeeds.entries()) {
+            var style = `"grid-row: ${idx + fields.length + 1}; grid-column: 1"`
+            grid.innerHTML += `<span style=${style}>${seed}</span>`
+        }
     }
     else {
         console.log(`error`)
