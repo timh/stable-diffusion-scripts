@@ -1,6 +1,38 @@
 #imagegrid {
-    display: grid;
-    column-gap: 2px;
-    row-gap: 2px;
+  display: grid;
+  column-gap: 2px;
+  row-gap: 2px;
 }
-  
+
+#imagegrid span.image img.thumbnail {
+  width: 128px;
+  height: 128px;
+}
+
+#imagegrid span.image:hover img.thumbnail {
+  visibility: hidden;
+  position: fixed;
+}
+
+#imagegrid span.image:hover span.details {
+  margin-top: 40px;
+  margin-left: 40px;
+  width: max-content;
+  height: max-content;
+  padding: 5px;
+  border: 5px;
+  border-radius: 5px;
+  background-color: black;
+  color: white;
+}
+
+#imagegrid span.image span.details {
+  position: fixed;
+  visibility: hidden;
+}
+
+#imagegrid span.image:hover span.details {
+  position: fixed;
+  visibility: visible;
+}
+

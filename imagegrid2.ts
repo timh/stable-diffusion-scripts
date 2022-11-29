@@ -169,8 +169,15 @@ async function updateList() {
             for (const [imgIdx, img] of iset.images.entries()) {
                 var row = imgIdx + fields.length + 1
                 style = `"grid-row: ${row}; grid-column: ${column}"`
-                imagesHTML += `<span style=${style}>\n`
-                imagesHTML += `  <img src="${img.filename}" style="width: 128; height: 128"/>\n`
+                imagesHTML += `<span style=${style} class="image">\n`
+                imagesHTML += `  <img src="${img.filename}" class="thumbnail"/>\n`
+                imagesHTML += `  <span class="details">\n`
+                imagesHTML += `    <img src="${img.filename}" class="fullsize"/>\n`
+                imagesHTML += `    <p>seed ${img.seed}</p>\n`
+                imagesHTML += `    <p>modelName ${iset.modelName}</p>\n`
+                imagesHTML += `    <p>modelSeed ${iset.modelSeed}</p>\n`
+                imagesHTML += `    <p>modelSteps ${iset.modelSteps}</p>\n`
+                imagesHTML += `  </span>\n`
                 imagesHTML += "</span>\n"
             }
         }
