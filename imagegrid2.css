@@ -33,6 +33,7 @@
 #imagegrid span.image:hover span.details {
   position: absolute;
   visibility: visible;
+  width: min-content;
 }
 
 #imagegrid .details_grid {
@@ -47,7 +48,7 @@
 
 #imagegrid .details_grid .detailsVal {
   grid-column: 2;
-  font-family:'Courier New', Courier, monospace;
+  font-family: 'Courier New', Courier, monospace;
 }
 
 #chooser {
