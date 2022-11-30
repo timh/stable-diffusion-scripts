@@ -75,6 +75,7 @@ class ColumnHeader {
     columnEnd: number
     field: string = ""
     value: string = ""
+    classes: string = ""
 
     constructor(row: number, field: string, value: string, column: number = 1) {
         this.row = row

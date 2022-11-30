@@ -12,7 +12,6 @@ var uniqueFieldValues: Map<string, Array<Object>>     // unique sorted values fo
 var fieldValueIndex: Map<String, Map<Object, number>> // index in uniqueFieldValues for each field, value
 
 
-
 function buildHeaders(imageSetKeys: string[]): ColumnHeader[] {
     var lastHeaders = new Map<string, ColumnHeader>() // current header by field
     var allHeaders = new Array<ColumnHeader>()
@@ -32,6 +31,41 @@ function buildHeaders(imageSetKeys: string[]): ColumnHeader[] {
             header.columnEnd ++
         }
     })
+
+    // now walk through the headers again. add classes to each of the headers such that it 
+    // correctly nests within the appropriate other headers.
+    var curFieldValues = new Map<String, any>()
+    var curFieldColumnEnds = new Map<String, number>()
+    var headersToUpdate = new Array<ColumnHeader>()
+    var curColumn = 2
+    for (var i = 0; i <= allHeaders.length; i ++) {
+        var header = i < allHeaders.length ? allHeaders[i] : null;
+        if (header == null || header.columnStart > curColumn) {
+            while (headersToUpdate.length > 0) {
+                const toUpdate = headersToUpdate.pop()!
+                var classes = new Array<String>()
+                for (const field of fields) {
+                    // do not add a class to toUpdate if its end column is higher
+                    // than the driving header (header)
+                    if (toUpdate.columnEnd > curFieldColumnEnds.get(field)!) {
+                        continue
+                    }
+                    var value = curFieldValues.get(field)!
+                    var valueIndex = fieldValueIndex.get(field)!.get(value)!
+                    classes.push(`${field}_${valueIndex}`)
+                }
+                toUpdate.classes = classes.join(" ")
+            }
+        }
+        if (header != null) {
+            // keep track of current value for each field, and the column that
+            // that value ends on. build up a list of headers that need to be updated.
+            curFieldValues.set(header.field, header.value)
+            curFieldColumnEnds.set(header.field, header.columnEnd)
+            curColumn = header.columnStart
+            headersToUpdate.push(header)
+        }
+    }
     return allHeaders
 }
 
@@ -132,7 +166,8 @@ async function updateAndRender() {
     grid.innerHTML = ""
     allHeaders.forEach((header) => {
         var style = `"grid-row: ${header.row}; grid-column-start: ${header.columnStart}; grid-column-end: ${header.columnEnd}"`
-        grid.innerHTML += `<span style=${style}>${header.value}</span>\n`
+        console.log(`value ${header.value} classes ${header.classes}`)
+        grid.innerHTML += `<span style=${style} class="${header.classes}">${header.value}</span>\n`
     })
 
     // generate row labels for all the seeds
