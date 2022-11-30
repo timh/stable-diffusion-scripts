@@ -51,4 +51,39 @@
   font-family:'Courier New', Courier, monospace;
 }
 
+#chooser {
+  display: grid;
+  border-color: black;
+  border-width: 2px;
+  border-radius: 5px;
+  column-gap: 20px;
+  row-gap: 10px;
+  /* grid-template-columns: max-content;
+  grid-template-rows: max-content; */
+  grid-template: max-content;
+  margin-bottom: 20px;
+}
+
+#chooser .field {
+  color: blue;
+  grid-column: 1;
+}
+
+#chooser .values {
+  grid-column: 2;
+  line-height: 1.6;
+}
+
+#chooser .values span {
+  background-color: gray;
+  color: white;
+  border-radius: 5px;
+  margin-right: 10px;
+  padding: 3px;
+}
+
+#chooser .values span.selected {
+  background-color: green;
+  color: white;
+}
 

@@ -1,25 +1,45 @@
 class GImage {
     filename: string
     seed: number
+
+    constructor(filename: string, seed: number) {
+        this.filename = filename
+        this.seed = seed
+    }
 }
 
 // var fields = ['modelName', 'modelSeed', 'modelSteps', 'prompt', 'sampler', 'samplerSteps', 'cfg']
-var fields = ['modelStr', 'prompt', 'sampler', 'samplerSteps', 'cfg']
+//var fields = ['modelStr', 'prompt', 'sampler', 'samplerSteps', 'cfg']
+var fields = ['modelStr', 'prompt', 'samplerStr', 'cfg']
 class GImageSet {
     modelStr: string
     modelName: string
-    modelSeed: number = 0
-    modelSteps: number = 0
+    modelSeed: number
+    modelSteps: number
     prompt: string
     sampler: string
-    samplerSteps: number = 0
-    cfg: number = 0
+    samplerSteps: number
+    samplerStr: string
+    cfg: number
 
     images: Array<GImage> = []
 
-    // model string meant for human consumption.
-    getModelStrPretty(): string {
-        return `${this.modelName} r${this.modelSeed} ${this.modelSteps}`
+    constructor(modelName = "", modelSeed = 0, modelSteps = 0, prompt = "", sampler = "", samplerSteps = 0, cfg = 0) {
+        this.modelName = modelName
+        this.modelSeed = modelSeed
+        this.modelSteps = modelSteps
+        this.prompt = prompt
+        this.sampler = sampler
+        this.samplerSteps = samplerSteps
+        this.cfg = cfg
+
+        if (this.modelSteps) {
+            this.modelStr = `${this.modelName} r${this.modelSeed} ${this.modelSteps.toString().padStart(5, " ")}`
+        }
+        else {
+            this.modelStr = this.modelName
+        }
+        this.samplerStr = `${this.sampler} ${this.samplerSteps}`
     }
 
     getKey(): string {
@@ -75,36 +95,32 @@ function updateWithFilename(filename: string): void {
     // modifies global variable 'allImageSets'
     var match = RE_FILENAME.exec(filename)
     if (match) {
-        var iset = new GImageSet()
-        var img = new GImage()
-        img.filename = filename
-
         var modelStr = match[1]
-        iset.prompt = match[2]
+        var prompt = match[2]
         var samplerStr = match[3]
-        img.seed = parseInt(match[4])
+        var seed = parseInt(match[4])
 
+        var sampler = ""
+        var samplerSteps = 0
+        var cfg = 0
         match = RE_SAMPLER.exec(samplerStr)
         if (match) {
-            iset.sampler = match[1]
-            iset.samplerSteps = parseInt(match[2])
-            iset.cfg = parseInt(match[3])
+            sampler = match[1]
+            samplerSteps = parseInt(match[2])
+            cfg = parseInt(match[3])
         }
 
+        var modelName = modelStr
         var modelSeed = 0
         var modelSteps = 0
         match = RE_MODEL.exec(modelStr)
         if (match) {
-            iset.modelName = match[1]
-            iset.modelSeed = parseInt(match[2])
-            iset.modelSteps = parseInt(match[3])
-            iset.modelStr = iset.getModelStrPretty()
-        }
-        else {
-            iset.modelName = modelStr
-            iset.modelStr = modelStr
+            modelName = match[1]
+            modelSeed = parseInt(match[2])
+            modelSteps = parseInt(match[3])
         }
 
+        var iset = new GImageSet(modelName, modelSeed, modelSteps, prompt, sampler, samplerSteps, cfg)
         var isetKey = iset.getKey()
         if (allImageSets.has(isetKey)) {
             iset = allImageSets.get(isetKey) as GImageSet
@@ -114,7 +130,7 @@ function updateWithFilename(filename: string): void {
         }
 
         // add an image to the imageset.
-        iset.images.push(img)
+        iset.images.push(new GImage(filename, seed))
     }
 }
 
@@ -140,6 +156,47 @@ function buildHeaders(imageSetKeys: string[]): ColumnHeader[] {
     return allHeaders
 }
 
+function renderChoices(field: string) {
+    var allUnique = new Set()
+    var isNumber = false
+    for (const obj of allImageSets.values()) {
+        allUnique.add(obj[field])
+        if (typeof obj[field] == 'number') {
+            isNumber = true
+        }
+    }
+
+    // javascript sort behavior is ascii, even when used against numbers. use 
+    // number-appropriate sort here.
+    var choices = Array.from(allUnique)
+    if (isNumber) {
+        choices = (choices as Array<number>).sort((a: number, b: number) => a - b)
+    }
+    else {
+        choices = choices.sort()
+    }
+    if (field == 'modelSteps') {
+        for (const val of allUnique) {
+            console.log(`allUnique: val ${val} type ${typeof val}`)
+        }
+        for (const val of choices) {
+            console.log(`choice: val ${val} type ${typeof val}`)
+        }
+        console.log(`allUnique: ${allUnique}`)
+        console.log(`choices: ${choices}`)
+    }
+
+    var html = ""
+    html += `<span class="field">${field}</span>\n`
+    html += `<span class="values">\n`
+    for (const choice of choices) {
+        html += `  <span class="selected">${choice}</span>\n`
+    }
+    html += `</span><!-- values -->\n`
+
+    document.getElementById('chooser')!.innerHTML += html
+}
+
 async function updateList() {
     var resp = await fetch("filelist.txt");
     
@@ -150,11 +207,16 @@ async function updateList() {
             updateWithFilename(filename)
         })
 
+        renderChoices('modelStr')
+        renderChoices('modelSteps')
+        renderChoices('modelSeed')
+        renderChoices('prompt')
+
         var imageSetKeys = Array.from(allImageSets.keys()).sort()
-        imageSetKeys.forEach((setKey) => {
-            var val = allImageSets.get(setKey)
-            console.log(`${setKey} has ${val!.images.length}`)
-        })
+        // imageSetKeys.forEach((setKey) => {
+        //     var val = allImageSets.get(setKey)
+        //     console.log(`${setKey} has ${val!.images.length}`)
+        // })
 
         var allHeaders = buildHeaders(imageSetKeys)
         var grid = document.getElementById("imagegrid") as HTMLElement
