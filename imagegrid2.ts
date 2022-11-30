@@ -9,8 +9,9 @@ class GImage {
 }
 
 // var fields = ['modelName', 'modelSeed', 'modelSteps', 'prompt', 'sampler', 'samplerSteps', 'cfg']
-//var fields = ['modelStr', 'prompt', 'sampler', 'samplerSteps', 'cfg']
+// var fields = ['modelStr', 'prompt', 'sampler', 'samplerSteps', 'cfg']
 var fields = ['modelStr', 'prompt', 'samplerStr', 'cfg']
+// var fields = ['modelName', 'modelSeed', 'modelSteps', 'prompt', 'samplerStr', 'cfg']
 class GImageSet {
     modelStr: string
     modelName: string
@@ -207,9 +208,10 @@ async function updateList() {
             updateWithFilename(filename)
         })
 
-        renderChoices('modelStr')
-        renderChoices('modelSteps')
+        // renderChoices('modelStr')
+        renderChoices('modelName')
         renderChoices('modelSeed')
+        renderChoices('modelSteps')
         renderChoices('prompt')
 
         var imageSetKeys = Array.from(allImageSets.keys()).sort()

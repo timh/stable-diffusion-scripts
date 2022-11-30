@@ -56,17 +56,22 @@
   border-color: black;
   border-width: 2px;
   border-radius: 5px;
+  background-color: lightgray;
+  padding: 3px;
   column-gap: 20px;
-  row-gap: 10px;
-  /* grid-template-columns: max-content;
-  grid-template-rows: max-content; */
-  grid-template: max-content;
+  row-gap: 5px;
+  grid-template-columns: max-content;
+  grid-template-rows: max-content;
+  width: auto;
   margin-bottom: 20px;
 }
 
 #chooser .field {
-  color: blue;
   grid-column: 1;
+  /* font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif; */
+  /* font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif; */
+  /* font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif; */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 #chooser .values {
