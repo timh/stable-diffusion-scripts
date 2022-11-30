@@ -35,8 +35,7 @@ function buildHeaders(imageSetKeys: string[]): ColumnHeader[] {
     return allHeaders
 }
 
-function toggle(span: Element, field: string, idx: number) {
-    var className = `${field}_${idx}`
+function toggle(span: Element, className: string) {
     var index = span.className.indexOf('selected') 
     var hide = (index != undefined && index != -1)
     span.className = hide ? "" : "selected"
@@ -52,26 +51,28 @@ function toggle(span: Element, field: string, idx: number) {
 }
 
 function renderChoices(field: string) {
-    var allUnique = new Set()
-    var isNumber = false
-    for (const obj of allImageSets.values()) {
-        allUnique.add(obj[field])
-        if (typeof obj[field] == 'number') {
-            isNumber = true
-        }
-    }
+    var choices = uniqueFieldValues.get(field)!
+    var chooserDiv = document.getElementById('chooser')!
 
-    var choices = sort(allUnique)
+    var span = document.createElement("span")
+    span.className = "field"
+    span.appendChild(document.createTextNode(field))
+    chooserDiv.appendChild(span)
 
-    var html = ""
-    html += `<span class="field">${field}</span>\n`
-    html += `<span class="values">\n`
+    span = document.createElement("span")
+    span.className = "values"
+    chooserDiv.appendChild(span)
+
     for (const [idx, choice] of choices.entries()) {
-        html += `  <span class="selected" onClick="toggle(this, '${field}', ${idx})">${choice}</span>\n`
+        var choiceSpan = document.createElement("span")
+        choiceSpan.className = "selected"
+        choiceSpan.onclick = function(this: GlobalEventHandlers, ev: MouseEvent): any {
+            var fieldClass = `${field}_${idx}`
+            toggle(ev.target as Element, fieldClass)
+        }
+        choiceSpan.appendChild(document.createTextNode(choice.toString()))
+        span.appendChild(choiceSpan)
     }
-    html += `</span><!-- values -->\n`
-
-    document.getElementById('chooser')!.innerHTML += html
 }
 
 async function updateImages() {
@@ -88,9 +89,10 @@ async function updateImages() {
         // start by building a set.
         var uniqueFieldValuesSet = new Map<string, Set<Object>>()
         for (const field of fields) {
-            uniqueFieldValuesSet.set(field, new Set<Object>())
-            for (const iset of allImageSets) {
-                uniqueFieldValuesSet.get(field)!.add(iset[field])
+            var valueSet = new Set<Object>()
+            uniqueFieldValuesSet.set(field, valueSet)
+            for (const iset of allImageSets.values()) {
+                valueSet.add(iset[field])
             }
         }
 
@@ -103,9 +105,11 @@ async function updateImages() {
 
         fieldValueIndex = new Map<string, Map<Object, number>>()
         for (const field of fields) {
-            fieldValueIndex.set(field, new Map<string, number>())
+            var valueMap = new Map<any, number>()
+            fieldValueIndex.set(field, valueMap)
             for (const [idx, value] of uniqueFieldValues.get(field)!.entries()) {
-                fieldValueIndex.get(field)!.set(value, idx)
+                valueMap.set(value, idx)
+                console.log(`fieldValueIndex (${field}, ${value}) = ${idx}`)
             }
         }
     }
@@ -114,7 +118,7 @@ async function updateImages() {
     }
 }
 
-async function update() {
+async function updateAndRender() {
     await updateImages()
 
     // renderChoices('modelStr')
@@ -138,7 +142,7 @@ async function update() {
             allSeedsSet.add(img.seed)
         }
     }
-    var allSeeds = Array.from(allSeedsSet).sort()
+    var allSeeds = sort(allSeedsSet)
     for (const [idx, seed] of allSeeds.entries()) {
         var style = `"grid-row: ${idx + fields.length + 1}; grid-column: 1"`
         grid.innerHTML += `<span style=${style}>${seed}</span>`
@@ -149,11 +153,16 @@ async function update() {
     for (const [isetIdx, setKey] of allImageSetKeys.entries()) {
         var iset = allImageSets.get(setKey) as GImageSet
         var column = isetIdx + 2
+        var classes = fields.map((field) => {
+            var val = iset[field]
+            return `${field}_${fieldValueIndex.get(field)?.get(val)}`
+        }).join(" ")
+
         for (const [imgIdx, img] of iset.images.entries()) {
             var row = imgIdx + fields.length + 1
             
-            style = `"grid-row: ${row}; grid-column: ${column}"`
-            imagesHTML += `<span style=${style} class="image">\n`
+            var style = `"grid-row: ${row}; grid-column: ${column}"`
+            imagesHTML += `<span style=${style} class="image ${classes}">\n`
             imagesHTML += `  <img src="${img.filename}" class="thumbnail"/>\n`
             imagesHTML += `  <span class="details">\n`
             imagesHTML += `    <img src="${img.filename}" class="fullsize"/>\n`
@@ -172,6 +181,6 @@ async function update() {
     return null;
 }
 
-update().then((val) => {
+updateAndRender().then((val) => {
     console.log("done with updateList")
 })

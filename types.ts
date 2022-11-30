@@ -87,17 +87,21 @@ class ColumnHeader {
 function sort(objects): Object[] {
     // javascript sort behavior is ascii, even when used against numbers. use 
     // number-appropriate sort here.
-    var sorted = Array.from(objects) as Object[]
+    objects = Array.from(objects) as Object[]
     var isNumber = false
-    if (sorted.length > 0) {
+    if (objects.length > 0) {
         isNumber = (typeof objects[0] == 'number')
+        if (!isNumber) {
+            console.log(`not number, it's ${typeof objects[0]}`)
+        }
     }
 
+    var sorted: Object[]
     if (isNumber) {
-        sorted = (sorted as Array<number>).sort((a: number, b: number) => a - b)
+        sorted = (objects as Array<number>).sort((a: number, b: number) => a - b)
     }
     else {
-        sorted = sorted.sort()
+        sorted = objects.sort()
     }
     return sorted
 }
