@@ -1,12 +1,11 @@
 #imagegrid {
   display: grid;
-  column-gap: 2px;
-  row-gap: 2px;
 }
 
 #imagegrid span.image img.thumbnail {
   width: 128px;
   height: 128px;
+  margin: 2px;
 }
 
 #imagegrid span.image:hover img.thumbnail {
