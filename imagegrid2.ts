@@ -70,12 +70,23 @@ function buildHeaders(imageSetKeys: string[]): ColumnHeader[] {
     return allHeaders
 }
 
-function toggle(className: string) {
+type Visibility = ("toggle" | "hide" | "show")
+function setVisibility(className: string, visibility: Visibility): Visibility {
     var spanId = `choice_${className}`
     var span = document.getElementById(spanId)
     if (span != null) {
         var index = span.className.indexOf('selected') 
-        var hide = (index != undefined && index != -1)
+        var hide: boolean
+        if (visibility == "hide") {
+            hide = true;
+        }
+        else if (visibility == "show") {
+            hide = false;
+        }
+        else {
+            hide = (index != undefined && index != -1)
+        }
+
         span.className = hide ? "" : "selected"
 
         for (const el of document.getElementsByClassName(className)) {
@@ -86,10 +97,10 @@ function toggle(className: string) {
                 el.className = el.className.replace(" hidden", "")
             }
         }
+        return hide ? "hide" : "show"
     }
-    else {
-        console.log(`can't find span ${spanId}`)
-    }
+    console.log(`can't find span ${spanId}`)
+    return "toggle"
 }
 
 function renderChoices(field: string) {
@@ -112,7 +123,7 @@ function renderChoices(field: string) {
         choiceSpan.id = `choice_${fieldClass}`
         choiceSpan.onclick = function(this: GlobalEventHandlers, ev: MouseEvent): any {
             var fieldClass = `${field}_${idx}`
-            toggle(fieldClass)
+            var visibility = setVisibility(fieldClass, "toggle")
 
             // if toggling a modelName, also toggle the modelStr's that are subsets of it.
             if (field == 'modelName' || field == 'modelSeed' || field == 'modelSteps') {
@@ -137,7 +148,7 @@ function renderChoices(field: string) {
                     }
                     var modelStrClass = `modelStr_${matchIdx}`
                     console.log(`toggled ${fieldClass} '${choice}' off: also toggling ${modelStrClass}: '${matchChoice}'`)
-                    toggle(modelStrClass)
+                    setVisibility(modelStrClass, visibility)
                 }
             }
         }
