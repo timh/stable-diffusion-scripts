@@ -70,18 +70,25 @@ function buildHeaders(imageSetKeys: string[]): ColumnHeader[] {
     return allHeaders
 }
 
-function toggle(span: Element, className: string) {
-    var index = span.className.indexOf('selected') 
-    var hide = (index != undefined && index != -1)
-    span.className = hide ? "" : "selected"
+function toggle(className: string) {
+    var spanId = `choice_${className}`
+    var span = document.getElementById(spanId)
+    if (span != null) {
+        var index = span.className.indexOf('selected') 
+        var hide = (index != undefined && index != -1)
+        span.className = hide ? "" : "selected"
 
-    for (const el of document.getElementsByClassName(className)) {
-        if (hide) {
-            el.className = el.className + " hidden"
+        for (const el of document.getElementsByClassName(className)) {
+            if (hide) {
+                el.className = el.className + " hidden"
+            }
+            else {
+                el.className = el.className.replace(" hidden", "")
+            }
         }
-        else {
-            el.className = el.className.replace(" hidden", "")
-        }
+    }
+    else {
+        console.log(`can't find span ${spanId}`)
     }
 }
 
@@ -100,10 +107,39 @@ function renderChoices(field: string) {
 
     for (const [idx, choice] of choices.entries()) {
         var choiceSpan = document.createElement("span")
+        var fieldClass = `${field}_${idx}`
         choiceSpan.className = "selected"
+        choiceSpan.id = `choice_${fieldClass}`
         choiceSpan.onclick = function(this: GlobalEventHandlers, ev: MouseEvent): any {
             var fieldClass = `${field}_${idx}`
-            toggle(ev.target as Element, fieldClass)
+            toggle(fieldClass)
+
+            // if toggling a modelName, also toggle the modelStr's that are subsets of it.
+            if (field == 'modelName' || field == 'modelSeed' || field == 'modelSteps') {
+                var matchingModelStrs = uniqueFieldValues.get('modelStr') as Array<String>
+                for (const [matchIdx, matchChoice] of matchingModelStrs.entries()) {
+                    if (field == 'modelName' && matchChoice.startsWith(choice as string)) {
+                        // modelStr that starts with this modelName should be matched.
+                    }
+                    else if (field == 'modelSeed') {
+                        // modelStr that has r{seed} in it should match.
+                        var seedStr = ` r${choice} `
+                        if (matchChoice.indexOf(seedStr) == -1) {
+                            continue;
+                        }
+                    }
+                    else if (field == 'modelSteps' && matchChoice.endsWith(choice as string)) {
+                        // modelStr that ends with _{steps} should match
+                    }
+                    else {
+                        // everything else shouldn't match.
+                        continue;
+                    }
+                    var modelStrClass = `modelStr_${matchIdx}`
+                    console.log(`toggled ${fieldClass} '${choice}' off: also toggling ${modelStrClass}: '${matchChoice}'`)
+                    toggle(modelStrClass)
+                }
+            }
         }
         choiceSpan.appendChild(document.createTextNode(choice.toString()))
         span.appendChild(choiceSpan)
@@ -144,7 +180,6 @@ async function updateImages() {
             fieldValueIndex.set(field, valueMap)
             for (const [idx, value] of uniqueFieldValues.get(field)!.entries()) {
                 valueMap.set(value, idx)
-                console.log(`fieldValueIndex (${field}, ${value}) = ${idx}`)
             }
         }
     }
@@ -169,7 +204,7 @@ async function updateAndRender() {
     grid.innerHTML = ""
     allHeaders.forEach((header) => {
         var style = `"grid-row: ${header.row}; grid-column-start: ${header.columnStart}; grid-column-end: ${header.columnEnd}"`
-        console.log(`value ${header.value} classes ${header.classes}`)
+        // console.log(`value ${header.value} classes ${header.classes}`)
         grid.innerHTML += `<span style=${style} class="${header.classes}">${header.value}</span>\n`
     })
 

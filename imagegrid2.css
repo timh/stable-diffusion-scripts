@@ -1,5 +1,6 @@
 #imagegrid {
   display: grid;
+  width: min-content;
 }
 
 #imagegrid span.image img.thumbnail {

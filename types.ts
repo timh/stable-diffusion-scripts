@@ -92,9 +92,6 @@ function sort(objects): Object[] {
     var isNumber = false
     if (objects.length > 0) {
         isNumber = (typeof objects[0] == 'number')
-        if (!isNumber) {
-            console.log(`not number, it's ${typeof objects[0]}`)
-        }
     }
 
     var sorted: Object[]
