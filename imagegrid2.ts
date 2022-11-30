@@ -1,10 +1,11 @@
-import { GImage, GImageSet, ColumnHeader, sort } from "./types"
-import { buildImageSets } from "./build"
+import { GImage, GImageSet, ColumnHeader, sort } from "./types.js"
+import { buildImageSets } from "./build.js"
 
 // var fields = ['modelName', 'modelSeed', 'modelSteps', 'prompt', 'sampler', 'samplerSteps', 'cfg']
 // var fields = ['modelStr', 'prompt', 'sampler', 'samplerSteps', 'cfg']
 // var fields = ['modelStr', 'prompt', 'samplerStr', 'cfg']
-var fields = ['modelName', 'modelSeed', 'modelSteps', 'prompt', 'samplerStr', 'cfg']
+// var fields = ['modelName', 'modelSeed', 'modelSteps', 'prompt', 'samplerStr', 'cfg']
+var fields = ['modelStr', 'modelName', 'modelSeed', 'modelSteps', 'prompt', 'samplerStr', 'cfg']
 
 var allImageSets: Map<string, GImageSet>              // image sets by key
 var allImageSetKeys: Array<string>                    // sorted
@@ -155,11 +156,13 @@ async function updateImages() {
 async function updateAndRender() {
     await updateImages()
 
-    // renderChoices('modelStr')
+    renderChoices('modelStr')
     renderChoices('modelName')
     renderChoices('modelSeed')
     renderChoices('modelSteps')
     renderChoices('prompt')
+    renderChoices('samplerStr')
+    renderChoices('cfg')
 
     var allHeaders = buildHeaders(allImageSetKeys)
     var grid = document.getElementById("imagegrid") as HTMLElement

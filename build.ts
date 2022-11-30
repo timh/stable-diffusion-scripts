@@ -1,4 +1,4 @@
-import { GImage, GImageSet } from "./types"
+import { GImage, GImageSet } from "./types.js"
 
 function buildImageSets(fields: string[], filenames: string[]): Map<string, GImageSet> {
     const RE_FILENAME = /(.+[\d_]+)--(.+)--([\w\+\d_,]+)\/\d+\.(\d+)\.png/
