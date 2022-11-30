@@ -6,6 +6,12 @@
 */*.html
 **/*.txt
 **/imagegrid.html
+**/imagegrid2.js
+**/types.js
+**/build.js
+*/*/imagegrid2.css
+*/*/imagegrid2.html
+
 **/.invoke_history
 **/invoke_log.*
 **/.DS_Store
