@@ -113,11 +113,11 @@ class ImageGenerator:
         # re-create scheduler/pipeline only when the sampler or model changes.
         if image_set.model_dir != self.last_model_dir:
             self.pipeline = StableDiffusionPipeline.from_pretrained(image_set.model_dir, revision="fp16", torch_dtype=torch.float16, safety_checker=None)
+            self.pipeline = self.pipeline.to("cuda")
 
         if image_set.sampler_name != self.last_sampler_name or self.pipeline.scheduler is None:
             scheduler_fun = SCHEDULERS[image_set.sampler_name]
             self.pipeline.scheduler = scheduler_fun(self.pipeline)
-            self.pipeline = self.pipeline.to("cuda")
             self.last_sampler_name = image_set.sampler_name
 
         while len(needed_filenames) > 0:
