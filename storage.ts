@@ -12,19 +12,15 @@ class StoredVal<T> {
         this.key = key
         this._convertForSave = convertForSave
         this._convertForLoad = convertForLoad
+
         var jsonVal = localStorage.getItem(key)
-        console.log(`jsonVal ${jsonVal}`)
         if (jsonVal != null) {
             this._storage = JSON.parse(jsonVal)["data"]
-            console.log(`now storage ${this._storage}`)
             if (this._storage == undefined) {
                 this._storage = defaultVal
-                console.log(`that was undefined`)
             }
             else if (this._convertForLoad != null) {
-                console.log(`before convert ${this._storage}`)
                 this._storage = this._convertForLoad(this._storage)
-                console.log(`after convert  ${this._storage}`)
             }
         }
         else {

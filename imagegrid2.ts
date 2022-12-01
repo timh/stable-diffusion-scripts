@@ -236,15 +236,6 @@ async function updateAndRender() {
     renderChoices('samplerStr')
     renderChoices('cfg')
 
-    var hidden = hiddenState.get()
-    for (const hiddenStr of hidden) {
-        var [field, value] = hiddenStr.split("/") as [string, any]
-        if (["modelSteps", "modelSeed", "cfg"].indexOf(field) != -1) {
-            value = parseInt(value)
-        }
-        setVisibility(field as string, value, "hide")
-    }
-
     var allHeaders = buildHeaders(allImageSetKeys)
     var grid = document.getElementById("imagegrid") as HTMLElement
     grid.innerHTML = ""
@@ -297,6 +288,15 @@ async function updateAndRender() {
         }
     }
     grid.innerHTML += imagesHTML
+
+    var hidden = hiddenState.get()
+    for (const hiddenStr of hidden) {
+        var [field, value] = hiddenStr.split("/") as [string, any]
+        if (["modelSteps", "modelSeed", "cfg"].indexOf(field) != -1) {
+            value = parseInt(value)
+        }
+        setVisibility(field as string, value, "hide")
+    }
     return null;
 }
 
