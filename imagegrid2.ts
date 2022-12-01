@@ -1,5 +1,6 @@
 import { GImage, GImageSet, ColumnHeader, sort } from "./types.js"
 import { buildImageSets } from "./build.js"
+import { StoredVal } from "./storage.js"
 
 // var fields = ['modelName', 'modelSeed', 'modelSteps', 'prompt', 'sampler', 'samplerSteps', 'cfg']
 // var fields = ['modelStr', 'prompt', 'sampler', 'samplerSteps', 'cfg']
@@ -70,34 +71,60 @@ function buildHeaders(imageSetKeys: string[]): ColumnHeader[] {
     return allHeaders
 }
 
+const hiddenState = new StoredVal('hidden', new Set<String>(), 
+                                    (storage) => Array.from(storage),
+                                    (jsonVal) => new Set(jsonVal))
+function isHidden(field: String, value: any): boolean {
+    var key = `${field}/${value}`
+    return hiddenState.get().has(key)
+}
+
 type Visibility = ("toggle" | "hide" | "show")
-function setVisibility(className: string, visibility: Visibility): Visibility {
+function setVisibility(field: string, value: any, visibility: Visibility): Visibility {
+    var index = fieldValueIndex.get(field)?.get(value)
+    if (index == undefined) {
+        console.log(`can't find index for ${field} ${value}`)
+        return "toggle"
+    }
+
+    var className = `${field}_${index}`
     var spanId = `choice_${className}`
     var span = document.getElementById(spanId)
     if (span != null) {
-        var index = span.className.indexOf('selected') 
-        var hide: boolean
+        var curHidden = isHidden(field, value)
+        var newHidden: boolean
+
         if (visibility == "hide") {
-            hide = true;
+            newHidden = true
         }
         else if (visibility == "show") {
-            hide = false;
+            newHidden = false
         }
         else {
-            hide = (index != undefined && index != -1)
+            newHidden = !curHidden
         }
 
-        span.className = hide ? "" : "selected"
+        span.className = newHidden ? "" : "selected"
 
         for (const el of document.getElementsByClassName(className)) {
-            if (hide) {
+            if (newHidden) {
                 el.className = el.className + " hidden"
             }
             else {
                 el.className = el.className.replace(" hidden", "")
             }
         }
-        return hide ? "hide" : "show"
+
+        const storageId = `${field}/${value}`
+        if (newHidden) {
+            hiddenState.get().add(storageId)
+        }
+        else {
+            hiddenState.get().delete(storageId)
+        }
+        hiddenState.save()
+
+        return newHidden ? "hide" : "show"
     }
     console.log(`can't find span ${spanId}`)
     return "toggle"
@@ -121,13 +148,13 @@ function renderChoices(field: string) {
         var fieldClass = `${field}_${idx}`
         choiceSpan.className = "selected"
         choiceSpan.id = `choice_${fieldClass}`
+
         choiceSpan.onclick = function(this: GlobalEventHandlers, ev: MouseEvent): any {
-            var fieldClass = `${field}_${idx}`
-            var visibility = setVisibility(fieldClass, "toggle")
+            var visibility = setVisibility(field, choice, "toggle")
 
             // if toggling a modelName, also toggle the modelStr's that are subsets of it.
             if (field == 'modelName' || field == 'modelSeed' || field == 'modelSteps') {
-                var matchingModelStrs = uniqueFieldValues.get('modelStr') as Array<String>
+                var matchingModelStrs = uniqueFieldValues.get('modelStr') as Array<string>
                 for (const [matchIdx, matchChoice] of matchingModelStrs.entries()) {
                     if (field == 'modelName' && matchChoice.startsWith(choice as string)) {
                         // modelStr that starts with this modelName should be matched.
@@ -146,9 +173,8 @@ function renderChoices(field: string) {
                         // everything else shouldn't match.
                         continue;
                     }
-                    var modelStrClass = `modelStr_${matchIdx}`
-                    console.log(`toggled ${fieldClass} '${choice}' off: also toggling ${modelStrClass}: '${matchChoice}'`)
-                    setVisibility(modelStrClass, visibility)
+
+                    setVisibility('modelStr', matchChoice, visibility)
                 }
             }
         }
@@ -169,9 +195,9 @@ async function updateImages() {
 
         // build sorted list of unique values for each field.
         // start by building a set.
-        var uniqueFieldValuesSet = new Map<string, Set<Object>>()
+        var uniqueFieldValuesSet = new Map<string, Set<any>>()
         for (const field of fields) {
-            var valueSet = new Set<Object>()
+            var valueSet = new Set<any>()
             uniqueFieldValuesSet.set(field, valueSet)
             for (const iset of allImageSets.values()) {
                 valueSet.add(iset[field])
@@ -179,7 +205,7 @@ async function updateImages() {
         }
 
         // then convert it to a sorted array
-        uniqueFieldValues = new Map<string, Array<Object>>()
+        uniqueFieldValues = new Map<string, Array<any>>()
         for (const field of fields) {
             var val = uniqueFieldValuesSet.get(field)!
             uniqueFieldValues.set(field, sort(val))
@@ -209,6 +235,15 @@ async function updateAndRender() {
     renderChoices('prompt')
     renderChoices('samplerStr')
     renderChoices('cfg')
+
+    var hidden = hiddenState.get()
+    for (const hiddenStr of hidden) {
+        var [field, value] = hiddenStr.split("/") as [string, any]
+        if (["modelSteps", "modelSeed", "cfg"].indexOf(field) != -1) {
+            value = parseInt(value)
+        }
+        setVisibility(field as string, value, "hide")
+    }
 
     var allHeaders = buildHeaders(allImageSetKeys)
     var grid = document.getElementById("imagegrid") as HTMLElement
