@@ -46,6 +46,9 @@ function buildImageSets(fields: string[], filenames: string[]): Map<string, GIma
             // add an image to the imageset.
             iset.images.push(new GImage(filename, seed))
         }
+        else {
+            console.log(`no match: ${filename}`)
+        }
     }
     return imageSets
 }

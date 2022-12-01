@@ -104,4 +104,12 @@ function sort(objects): Object[] {
     return sorted
 }
 
-export { GImage, GImageSet, ColumnHeader, sort }
+function createElement(type: string, props = {}): HTMLElement {
+    var elem = document.createElement(type)
+    for (const prop in props) {
+        elem.setAttribute(prop, props[prop])
+    }
+    return elem
+}
+
+export { GImage, GImageSet, ColumnHeader, sort, createElement }

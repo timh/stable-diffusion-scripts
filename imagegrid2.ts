@@ -1,4 +1,4 @@
-import { GImage, GImageSet, ColumnHeader, sort } from "./types.js"
+import { GImage, GImageSet, ColumnHeader, sort, createElement } from "./types.js"
 import { buildImageSets } from "./build.js"
 import { StoredVal } from "./storage.js"
 
@@ -238,11 +238,13 @@ async function updateAndRender() {
 
     var allHeaders = buildHeaders(allImageSetKeys)
     var grid = document.getElementById("imagegrid") as HTMLElement
-    grid.innerHTML = ""
     allHeaders.forEach((header) => {
-        var style = `"grid-row: ${header.row}; grid-column-start: ${header.columnStart}; grid-column-end: ${header.columnEnd}"`
-        // console.log(`value ${header.value} classes ${header.classes}`)
-        grid.innerHTML += `<span style=${style} class="${header.classes}">${header.value}</span>\n`
+        var span = createElement('span', {'class': header.classes})
+        span.style.gridRow = header.row.toString()
+        span.style.gridColumnStart = header.columnStart.toString()
+        span.style.gridColumnEnd = header.columnEnd.toString()
+        span.textContent = header.value
+        grid.appendChild(span)
     })
 
     // generate row labels for all the seeds
@@ -254,12 +256,14 @@ async function updateAndRender() {
     }
     var allSeeds = sort(allSeedsSet)
     for (const [idx, seed] of allSeeds.entries()) {
-        var style = `"grid-row: ${idx + fields.length + 1}; grid-column: 1"`
-        grid.innerHTML += `<span style=${style}>${seed}</span>`
+        var span = createElement('span')
+        span.style.gridRow = (idx + fields.length + 1).toString()
+        span.style.gridColumn = "1"
+        grid.appendChild(span)
     }
 
     // do the images!
-    var imagesHTML = ""
+    // var imagesHTML = ""
     for (const [isetIdx, setKey] of allImageSetKeys.entries()) {
         var iset = allImageSets.get(setKey) as GImageSet
         var column = isetIdx + 2
@@ -271,23 +275,31 @@ async function updateAndRender() {
         for (const [imgIdx, img] of iset.images.entries()) {
             var row = imgIdx + fields.length + 1
             
-            var style = `"grid-row: ${row}; grid-column: ${column}"`
-            imagesHTML += `<span style=${style} class="image ${classes}">\n`
-            imagesHTML += `  <img src="${img.filename}" class="thumbnail"/>\n`
-            imagesHTML += `  <span class="details">\n`
-            imagesHTML += `    <img src="${img.filename}" class="fullsize"/>\n`
-            imagesHTML += `    <div class="details_grid">\n`
-            imagesHTML += `      <span class="detailsKey">model</span><span class="detailsVal">${iset.modelStr}</span>\n`
-            imagesHTML += `      <span class="detailsKey">prompt</span><span class="detailsVal">"${iset.prompt}"</span>\n`
-            imagesHTML += `      <span class="detailsKey">sampler</span><span class="detailsVal">${iset.sampler} ${iset.samplerSteps}</span>\n`
-            imagesHTML += `      <span class="detailsKey">CFG</span><span class="detailsVal">${iset.cfg}</span>\n`
-            imagesHTML += `      <span class="detailsKey">seed</span><span class="detailsVal">${img.seed}</span>\n`
-            imagesHTML += `    </div>\n`
-            imagesHTML += `  </span>\n`
-            imagesHTML += "</span>\n"
+            var topSpan = createElement('span', {'class': `image ${classes}`})
+            topSpan.style.gridRow = row.toString()
+            topSpan.style.gridColumn = column.toString()
+
+            var thumbElem = topSpan.appendChild(createElement('img', {'src': img.filename, 'class': "thumbnail"}))
+            var detailsSpan = topSpan.appendChild(createElement('span', {'class': "details"}))
+            var imageElem = detailsSpan.appendChild(createElement('img', {'src': img.filename, 'class': "fullsize"}))
+            var detailsGrid = detailsSpan.appendChild(createElement('div', {'class': "details_grid"}))
+
+            var entries = {"model": iset.modelStr, "prompt": iset.prompt, 
+                           "sampler": `${iset.sampler} ${iset.samplerSteps}`,
+                           "CFG": iset.cfg.toString(), "seed": img.seed.toString()}
+            for (const key in entries) {
+                const value = entries[key]
+                var keySpan = createElement('span', {'class': "detailsKey"})
+                keySpan.textContent = key
+                var valueSpan = createElement('span', {'class': "detailsVal"})
+                valueSpan.textContent = value
+                detailsGrid.appendChild(keySpan)
+                detailsGrid.appendChild(valueSpan)
+            }
+
+            grid.appendChild(topSpan)
         }
     }
-    grid.innerHTML += imagesHTML
 
     var hidden = hiddenState.get()
     for (const hiddenStr of hidden) {
