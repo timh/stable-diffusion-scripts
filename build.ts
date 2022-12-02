@@ -50,6 +50,10 @@ function buildImageSets(fields: string[], filenames: string[]): Map<string, GIma
             console.log(`no match: ${filename}`)
         }
     }
+
+    for (const iset of imageSets.values()) {
+        iset.images = iset.images.sort((a, b) => a.filename.localeCompare(b.filename))
+    }
     return imageSets
 }
 

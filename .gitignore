@@ -3,7 +3,6 @@
 **/*.jpeg
 **/*.webp
 **/*.psd
-*/*.html
 **/*.txt
 **/imagegrid.html
 **/imagegrid2.js

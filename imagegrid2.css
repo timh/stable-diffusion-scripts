@@ -1,6 +1,7 @@
 #imagegrid {
   display: grid;
   width: min-content;
+  grid-template-rows: min-content;
 }
 
 #imagegrid span.image img.thumbnail {
@@ -96,4 +97,8 @@
 .hidden {
   visibility: hidden;
   width: 0;
+  /* when a header gets hidden, its width becomes 0. but if the string in that grid cell 
+     is long and now wraps, it will scroll everything below it down. accomodate this by
+     using a negative margin, which forces the cell to take up no vertical space. */
+  margin-bottom: -100em;
 }
