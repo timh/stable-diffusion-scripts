@@ -22,12 +22,13 @@
   background-color: black;
   opacity: 50%;
   padding: 5px;
-  /*z-index: 1;*/
+  z-index: 1;
 }
 #imagegrid .image span.image_select.checked {
   visibility: visible;
 }
 #imagegrid .image.hidden span.image_select.checked {
+  /* ensure that the check marks are hidden when the image is hidden */
   visibility: hidden;
 }
 
@@ -109,10 +110,5 @@
 }
 
 .hidden {
-  visibility: hidden;
-  width: 0;
-  /* when a header gets hidden, its width becomes 0. but if the string in that grid cell 
-     is long and now wraps, it will scroll everything below it down. accomodate this by
-     using a negative margin, which forces the cell to take up no vertical space. */
-  margin-bottom: -100em;
+  display: none;
 }

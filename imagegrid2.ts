@@ -287,7 +287,7 @@ function renderCheckStats() {
         var values = Array.from(fieldStats.keys()).sort((a, b) => {
             var aval = fieldStats.get(a)!
             var bval = fieldStats.get(b)!
-            return aval - bval
+            return bval - aval
         })
         html += `${field}:<ul/>\n`
         for (const [idx, value] of values.entries()) {
