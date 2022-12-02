@@ -2,12 +2,10 @@ import { GImage, GImageSet, ColumnHeader, sort, createElement } from "./types.js
 import { buildImageSets } from "./build.js"
 import { StoredVal } from "./storage.js"
 
-// var fields = ['modelName', 'modelSeed', 'modelSteps', 'prompt', 'sampler', 'samplerSteps', 'cfg']
-// var fields = ['modelStr', 'prompt', 'sampler', 'samplerSteps', 'cfg']
-// var fields = ['modelStr', 'prompt', 'samplerStr', 'cfg']
-// var fields = ['modelName', 'modelSeed', 'modelSteps', 'prompt', 'samplerStr', 'cfg']
-var fields = ['modelStr', 'modelName', 'modelSeed', 'modelSteps', 'prompt', 'samplerStr', 'cfg']
+// var fields = ['modelStr', 'modelName', 'modelSeed', 'modelSteps', 'prompt', 'samplerStr', 'cfg']
+var fields = ['modelStr', 'modelName', 'modelSteps', 'modelSeed', 'prompt', 'samplerStr', 'cfg']
 
+var imagesetByFilename: Map<string, GImageSet> = new Map()
 var allImageSets: Map<string, GImageSet>              // image sets by key
 var allImageSetKeys: Array<string>                    // sorted
 var uniqueFieldValues: Map<string, Array<Object>>     // unique sorted values for each field
@@ -130,6 +128,36 @@ function setVisibility(field: string, value: any, visibility: Visibility): Visib
     return "toggle"
 }
 
+function onclickChoice(field: string, choice: any): any {
+    var visibility = setVisibility(field, choice, "toggle")
+
+    // if toggling a modelName, also toggle the modelStr's that are subsets of it.
+    if (field == 'modelName' || field == 'modelSeed' || field == 'modelSteps') {
+        var matchingModelStrs = uniqueFieldValues.get('modelStr') as Array<string>
+        for (const [matchIdx, matchChoice] of matchingModelStrs.entries()) {
+            if (field == 'modelName' && matchChoice.startsWith(choice as string)) {
+                // modelStr that starts with this modelName should be matched.
+            }
+            else if (field == 'modelSeed') {
+                // modelStr that has r{seed} in it should match.
+                var seedStr = ` r${choice} `
+                if (matchChoice.indexOf(seedStr) == -1) {
+                    continue;
+                }
+            }
+            else if (field == 'modelSteps' && matchChoice.endsWith(choice as string)) {
+                // modelStr that ends with _{steps} should match
+            }
+            else {
+                // everything else shouldn't match.
+                continue;
+            }
+
+            setVisibility('modelStr', matchChoice, visibility)
+        }
+    }
+}
+
 function renderChoices(field: string) {
     var choices = uniqueFieldValues.get(field)!
     var chooserDiv = document.getElementById('chooser')!
@@ -150,33 +178,7 @@ function renderChoices(field: string) {
         choiceSpan.id = `choice_${fieldClass}`
 
         choiceSpan.onclick = function(this: GlobalEventHandlers, ev: MouseEvent): any {
-            var visibility = setVisibility(field, choice, "toggle")
-
-            // if toggling a modelName, also toggle the modelStr's that are subsets of it.
-            if (field == 'modelName' || field == 'modelSeed' || field == 'modelSteps') {
-                var matchingModelStrs = uniqueFieldValues.get('modelStr') as Array<string>
-                for (const [matchIdx, matchChoice] of matchingModelStrs.entries()) {
-                    if (field == 'modelName' && matchChoice.startsWith(choice as string)) {
-                        // modelStr that starts with this modelName should be matched.
-                    }
-                    else if (field == 'modelSeed') {
-                        // modelStr that has r{seed} in it should match.
-                        var seedStr = ` r${choice} `
-                        if (matchChoice.indexOf(seedStr) == -1) {
-                            continue;
-                        }
-                    }
-                    else if (field == 'modelSteps' && matchChoice.endsWith(choice as string)) {
-                        // modelStr that ends with _{steps} should match
-                    }
-                    else {
-                        // everything else shouldn't match.
-                        continue;
-                    }
-
-                    setVisibility('modelStr', matchChoice, visibility)
-                }
-            }
+            onclickChoice(field, choice)
         }
         choiceSpan.appendChild(document.createTextNode(choice.toString()))
         span.appendChild(choiceSpan)
@@ -192,6 +194,11 @@ async function updateImages() {
 
         allImageSets = buildImageSets(fields, filenames)
         allImageSetKeys = sort(allImageSets.keys()) as string[]
+        for (const iset of allImageSets.values()) {
+            for (const img of iset.images) {
+                imagesetByFilename.set(img.filename, iset)
+            }
+        }
 
         // build sorted list of unique values for each field.
         // start by building a set.
@@ -223,6 +230,79 @@ async function updateImages() {
     else {
         console.log("error")
     }
+}
+
+const imagesSelected = new StoredVal('images_selected', new Set<string>(), storage => Array.from(storage), jsonVal => new Set(jsonVal))
+function onclickThumbnail(ev: MouseEvent, filename: string) {
+    var filenamesSelected = imagesSelected.get()
+    var isChecked = filenamesSelected.has(filename)
+    var newChecked = !isChecked
+
+    var imgElement = ev.target as HTMLElement
+    var selectElem = imgElement.parentElement?.getElementsByClassName("image_select")?.item(0)
+    if (selectElem == null) {
+        console.log(`logic error: can't find image_select span for filename ${filename}`)
+        return
+    }
+
+    if (newChecked) {
+        selectElem.className += " checked"
+        filenamesSelected.add(filename)
+    }
+    else {
+        selectElem.className = selectElem.className.replace(" checked", "")
+        filenamesSelected.delete(filename)
+    }
+    imagesSelected.save()
+    renderCheckStats()
+}
+
+function renderCheckStats() {
+    var resultsElem = document.getElementById("checked_results")
+    if (resultsElem == null) {
+        console.log("resultsElem not found")
+        return
+    }
+
+    var html = ""
+
+    for (const field of fields) {
+        var fieldStats = new Map<any, number>()
+        for (const filename of imagesSelected.get()) {
+            var iset = imagesetByFilename.get(filename)
+            if (iset == null) {
+                console.log(`renderCheckStats: can't find imageset for filename ${filename}`)
+                continue
+            }
+            const fieldVal = iset[field]
+            var curCount = 0
+            if (!fieldStats.has(fieldVal)) {
+                fieldStats.set(fieldVal, 0)
+            }
+            else {
+                curCount = fieldStats.get(fieldVal)!
+            }
+            fieldStats.set(fieldVal, curCount + 1)
+        }
+        var values = Array.from(fieldStats.keys()).sort((a, b) => {
+            var aval = fieldStats.get(a)!
+            var bval = fieldStats.get(b)!
+            return aval - bval
+        })
+        html += `${field}:<ul/>\n`
+        for (const [idx, value] of values.entries()) {
+            html += "<li>"
+            if (field == 'prompt') {
+                html += `"${value}"`
+            }
+            else {
+                html += value.toString()
+            }
+            html += `: ${fieldStats.get(value)}</li>\n`
+        }
+        html += "</ul>\n"
+    }
+    resultsElem.innerHTML = html
 }
 
 async function updateAndRender() {
@@ -264,6 +344,7 @@ async function updateAndRender() {
 
     // do the images!
     // var imagesHTML = ""
+    var filenamesSelected = imagesSelected.get()
     for (const [isetIdx, setKey] of allImageSetKeys.entries()) {
         var iset = allImageSets.get(setKey) as GImageSet
         var column = isetIdx + 2
@@ -278,8 +359,16 @@ async function updateAndRender() {
             var topSpan = createElement('span', {'class': `image ${classes}`})
             topSpan.style.gridRow = row.toString()
             topSpan.style.gridColumn = column.toString()
+            var selectElem = topSpan.appendChild(createElement('span', {'class': 'image_select'}, "checked"))
+            if (filenamesSelected.has(img.filename)) {
+                selectElem.className += " checked"
+            }
 
             var thumbElem = topSpan.appendChild(createElement('img', {'src': img.filename, 'class': "thumbnail"}))
+            thumbElem.onclick = function(this, ev) {
+                onclickThumbnail(ev, img.filename)
+            }
+
             var detailsSpan = topSpan.appendChild(createElement('span', {'class': "details"}))
             var imageElem = detailsSpan.appendChild(createElement('img', {'src': img.filename, 'class': "fullsize"}))
             var detailsGrid = detailsSpan.appendChild(createElement('div', {'class': "details_grid"}))
@@ -300,6 +389,7 @@ async function updateAndRender() {
             grid.appendChild(topSpan)
         }
     }
+    renderCheckStats()
 
     var hidden = hiddenState.get()
     for (const hiddenStr of hidden) {

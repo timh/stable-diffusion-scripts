@@ -104,10 +104,13 @@ function sort(objects): Object[] {
     return sorted
 }
 
-function createElement(type: string, props = {}): HTMLElement {
+function createElement(type: string, props = {}, withText = ""): HTMLElement {
     var elem = document.createElement(type)
     for (const prop in props) {
         elem.setAttribute(prop, props[prop])
+    }
+    if (withText) {
+        elem.textContent = withText
     }
     return elem
 }

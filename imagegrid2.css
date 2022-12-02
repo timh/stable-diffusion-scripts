@@ -4,18 +4,36 @@
   grid-template-rows: min-content;
 }
 
-#imagegrid span.image img.thumbnail {
+#imagegrid .image img.thumbnail {
   width: 128px;
   height: 128px;
   margin: 2px;
 }
 
-#imagegrid span.image:hover img.thumbnail {
+#imagegrid .image:hover img.thumbnail {
   /* visibility: hidden; */
   position: absolute;
 }
 
-#imagegrid span.image:hover span.details {
+#imagegrid .image span.image_select {
+  visibility: hidden;
+  position: absolute;
+  color: greenyellow;
+  background-color: black;
+  opacity: 50%;
+  padding: 5px;
+  /*z-index: 1;*/
+}
+#imagegrid .image span.image_select.checked {
+  visibility: visible;
+}
+#imagegrid .image.hidden span.image_select.checked {
+  visibility: hidden;
+}
+
+#imagegrid span.image span.details {
+  position: absolute;
+  visibility: hidden;
   margin-top: 40px;
   margin-left: 40px;
   width: max-content;
@@ -25,17 +43,13 @@
   border-radius: 5px;
   background-color: black;
   color: white;
-}
-
-#imagegrid span.image span.details {
   position: absolute;
-  visibility: hidden;
+  width: min-content;
+  z-index: 2;
 }
 
 #imagegrid span.image:hover span.details {
-  position: absolute;
   visibility: visible;
-  width: min-content;
 }
 
 #imagegrid .details_grid {
