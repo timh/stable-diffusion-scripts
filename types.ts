@@ -6,6 +6,7 @@ const FIELDS = ['modelStr', 'modelName', 'modelSeed', 'modelSteps', 'prompt', 's
 class GImage {
     filename: string
     seed: number
+    checked: boolean = false
 
     constructor(filename: string, seed: number) {
         this.filename = filename

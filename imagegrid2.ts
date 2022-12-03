@@ -70,28 +70,33 @@ function renderChoices(field: string) {
     }
 }
 
-const STORE_FILENAMES = new StoredVal('images_selected', new Set<string>(), storage => Array.from(storage), jsonVal => new Set(jsonVal))
+const STORE_CHECKED = new StoredVal('images_selected', new Set<string>(), storage => Array.from(storage), jsonVal => new Set(jsonVal))
 function onclickThumbnail(ev: MouseEvent, filename: string) {
-    var filenamesSelected = STORE_FILENAMES.get()
-    var isChecked = filenamesSelected.has(filename)
+    var image = grid.imageByFilename.get(filename)
+    if (image == null) {
+        console.log(`onclickThumbnail: logic error: can't find image with filename ${filename}`)
+        return
+    }
+    var isChecked = image.checked
     var newChecked = !isChecked
 
     var imgElement = ev.target as HTMLElement
     var selectElem = imgElement.parentElement?.getElementsByClassName("image_select")?.item(0)
     if (selectElem == null) {
-        console.log(`logic error: can't find image_select span for filename ${filename}`)
+        console.log(`onclickThumbnail: logic error: can't find image_select span for filename ${filename}`)
         return
     }
 
+    image.checked = newChecked
     if (newChecked) {
         selectElem.className += " checked"
-        filenamesSelected.add(filename)
+        STORE_CHECKED.get().add(filename)
     }
     else {
         selectElem.className = selectElem.className.replace(" checked", "")
-        filenamesSelected.delete(filename)
+        STORE_CHECKED.get().delete(filename)
     }
-    STORE_FILENAMES.save()
+    STORE_CHECKED.save()
     renderCheckStats()
 }
 
@@ -106,7 +111,7 @@ function renderCheckStats() {
 
     for (const field of FIELDS) {
         var fieldStats = new Map<any, number>()
-        for (const filename of STORE_FILENAMES.get()) {
+        for (const filename of STORE_CHECKED.get()) {
             var iset = grid.imagesetByFilename.get(filename)
             if (iset == null) {
                 console.log(`renderCheckStats: can't find imageset for filename ${filename}`)
@@ -164,7 +169,7 @@ function renderGridHeaders() {
     }
     var allSeeds = sort(allSeedsSet)
     for (const [idx, seed] of allSeeds.entries()) {
-        var span = createElement('span')
+        var span = createElement('span', {}, seed.toString())
         span.style.gridRow = (idx + FIELDS.length + 1).toString()
         span.style.gridColumn = "1"
         gridElem.appendChild(span)
@@ -173,9 +178,7 @@ function renderGridHeaders() {
 
 function renderGridImages() {
     var gridElem = document.getElementById("imagegrid") as HTMLElement
-    gridElem.innerHTML = ""
 
-    var filenamesSelected = STORE_FILENAMES.get()
     for (const [isetIdx, setKey] of grid.imageSetKeys.entries()) {
         var iset = grid.imageSets.get(setKey) as GImageSet
         var column = isetIdx + 2
@@ -184,29 +187,29 @@ function renderGridImages() {
             return `${field}_${grid.fieldValueIndex.get(field)?.get(val)}`
         }).join(" ")
 
-        for (const [imgIdx, img] of iset.images.entries()) {
-            var row = imgIdx + FIELDS.length + 1
+        for (const [imageIdx, image] of iset.images.entries()) {
+            var row = imageIdx + FIELDS.length + 1
             
             var topSpan = createElement('span', {'class': `image ${classes}`})
             topSpan.style.gridRow = row.toString()
             topSpan.style.gridColumn = column.toString()
             var selectElem = topSpan.appendChild(createElement('span', {'class': 'image_select'}, "checked"))
-            if (filenamesSelected.has(img.filename)) {
+            if (image.checked) {
                 selectElem.className += " checked"
             }
 
-            var thumbElem = topSpan.appendChild(createElement('img', {'src': img.filename, 'class': "thumbnail"}))
+            var thumbElem = topSpan.appendChild(createElement('img', {'src': image.filename, 'class': "thumbnail"}))
             thumbElem.onclick = function(this, ev) {
-                onclickThumbnail(ev, img.filename)
+                onclickThumbnail(ev, image.filename)
             }
 
             var detailsSpan = topSpan.appendChild(createElement('span', {'class': "details"}))
-            var imageElem = detailsSpan.appendChild(createElement('img', {'src': img.filename, 'class': "fullsize"}))
+            var imageElem = detailsSpan.appendChild(createElement('img', {'src': image.filename, 'class': "fullsize"}))
             var detailsGrid = detailsSpan.appendChild(createElement('div', {'class': "details_grid"}))
 
             var entries = {"model": iset.modelStr, "prompt": iset.prompt, 
                            "sampler": `${iset.sampler} ${iset.samplerSteps}`,
-                           "CFG": iset.cfg.toString(), "seed": img.seed.toString()}
+                           "CFG": iset.cfg.toString(), "seed": image.seed.toString()}
             for (const key in entries) {
                 const value = entries[key]
                 var keySpan = createElement('span', {'class': "detailsKey"})
@@ -233,6 +236,14 @@ async function loadImages() {
         const imageSets = loadImageSets(filenames)
         grid = new GImageGrid(imageSets)
         gridHeaders = new GridHeaders(grid)
+
+        const filenamesSelected = STORE_CHECKED.get()
+        for (const filename of filenamesSelected) {
+            const image = grid.imageByFilename.get(filename)
+            if (image) {
+                image.checked = true
+            }
+        }
     }
     else {
         console.log("error")

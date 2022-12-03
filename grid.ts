@@ -6,6 +6,7 @@ const STORE_HIDDEN = new StoredVal('hidden', new Set<String>(),
 
 class GImageGrid {
     imagesetByFilename: Map<string, GImageSet>
+    imageByFilename: Map<string, GImage>
     imageSets: Map<string, GImageSet>                 // image sets by key
     imageSetKeys: Array<string>                       // sorted
     fieldUniqueValues: Map<string, Array<Object>>     // unique sorted values for each field
@@ -19,9 +20,11 @@ class GImageGrid {
         this.imageSets = imageSets
         this.imageSetKeys = sort(imageSets.keys()) as string[]
         this.imagesetByFilename = new Map()
+        this.imageByFilename = new Map()
         for (const iset of imageSets.values()) {
             for (const img of iset.images) {
                 this.imagesetByFilename.set(img.filename, iset)
+                this.imageByFilename.set(img.filename, img)
             }
         }
 
