@@ -17,8 +17,15 @@ class Config(argparse.Namespace):
     input_model_name: str
 
     def validate(self):
-        if not os.path.isdir(self.class_dir):
-            raise Exception(f"class_dir {self.class_dir} doesn't exist")
+        if not self.noclass:
+            if self.class_dir is None or self.class_prompt is None:
+                raise Exception("must pass class_dir and class_prompt, or use --noclass")
+            
+            if not os.path.isdir(self.class_dir):
+                raise Exception(f"class_dir {self.class_dir} doesn't exist")
+        elif self.class_dir is not None or self.class_prompt is not None:
+            raise Exception(f"passed --noclass, but class_dir {self.class_dir} or class_prompt {self.class_prompt}" is set)
+
         if not os.path.isdir(self.instance_dir):
             raise Exception(f"instance_dir {self.instance_dir} doesn't exist")
 
@@ -60,8 +67,6 @@ class Config(argparse.Namespace):
                 "--output_dir", output_dir,
                 "--instance_data_dir", self.instance_dir,
                 "--instance_prompt", self.instance_prompt,
-                "--class_data_dir", self.class_dir,
-                "--class_prompt", self.class_prompt,
                 "--learning_rate", str(self.learning_rate),
                 "--save_interval", str(self.save_interval),
                 "--save_min_steps", str(self.save_min_steps),
@@ -69,12 +74,11 @@ class Config(argparse.Namespace):
                 "--seed", str(seed),
                 "--pretrained_model_name_or_path", input_model_name,
                 #"--pretrained_vae_name_or_path=stabilityai/sd-vae-ft-mse",
-                "--with_prior_preservation",
-                "--prior_loss_weight=1.0",
                 "--resolution=512",
                 "--train_batch_size", str(self.train_batch_size),
                 "--train_text_encoder",
                 "--sample_batch_size=1",
+                "--n_save_sample=10",
                 "--gradient_accumulation_steps=2",
                 "--gradient_checkpointing",
                 "--use_8bit_adam",
@@ -82,6 +86,12 @@ class Config(argparse.Namespace):
                 "--lr_warmup_steps=0",
                 "--max_train_steps", str(max_train_steps),
                 "--mixed_precision=fp16"]
+
+        if self.class_prompt is not None:
+            args.extend(["--class_prompt", self.class_prompt])
+            args.extend(["--class_data_dir", self.class_dir])
+            args.append("--with_prior_preservation")
+            args.append("--prior_loss_weight=1.0")
 
         if "inpainting" in self.input_model_name:
             args.append("--not_cache_latents")
@@ -134,8 +144,9 @@ def parse_args() -> Config:
     parser = argparse.ArgumentParser(description="training wrapper for dreambooth", fromfile_prefix_chars="@")
     parser.add_argument("--output_root", default="/workspace/outputs", help="Path to root of output directory")
     parser.add_argument("--name", "-n", required=True, help="name of model to train, e.g., alexhin20")
-    parser.add_argument("--class_dir", required=True, help="class training images directory")
-    parser.add_argument("--class_prompt", required=True, help="class prompt")
+    parser.add_argument("--class_dir", help="class training images directory")
+    parser.add_argument("--class_prompt", help="class prompt")
+    parser.add_argument("--noclass", action='store_true', help="must pass this if no class dir/prompt is included")
     parser.add_argument("--instance_dir", required=True, help="instance images directory")
     parser.add_argument("--instance_prompt", required=True, help="instance prompt")
     parser.add_argument("--learning_rate", "--lr", "-l", default="1e-6", help="learning rate")
