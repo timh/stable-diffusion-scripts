@@ -1,3 +1,8 @@
+type Visibility = ("toggle" | "hide" | "show")
+
+const FIELDS = ['modelStr', 'modelName', 'modelSeed', 'modelSteps', 'prompt', 'samplerStr', 'cfg']
+// const FIELDS = ['modelStr', 'modelName', 'modelSteps', 'modelSeed', 'prompt', 'samplerStr', 'cfg']
+
 class GImage {
     filename: string
     seed: number
@@ -7,9 +12,6 @@ class GImage {
         this.seed = seed
     }
 }
-
-const FIELDS = ['modelStr', 'modelName', 'modelSeed', 'modelSteps', 'prompt', 'samplerStr', 'cfg']
-// const FIELDS = ['modelStr', 'modelName', 'modelSteps', 'modelSeed', 'prompt', 'samplerStr', 'cfg']
 
 class GImageSet {
     modelStr: string
@@ -46,12 +48,10 @@ class GImageSet {
         var res = ""
         var useFields = new Array<string>()
         for (const field of fields) {
-            if (field == 'modelStr') {
-                useFields.push('modelName')
-                useFields.push('modelSeed')
-                useFields.push('modelSteps')
-            }
-            else {
+            // don't include modelStr in the key; it's included via its component parts, and 
+            // it's not sorted correctly due to numeric steps being treated as non zero-padded
+            // strings.
+            if (field != 'modelStr') {
                 useFields.push(field)
             }
         }
@@ -87,8 +87,6 @@ class ColumnHeader {
         this.value = value
     }
 }
-
-type Visibility = ("toggle" | "hide" | "show")
 
 function sort(objects): Object[] {
     // javascript sort behavior is ascii, even when used against numbers. use 

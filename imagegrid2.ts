@@ -12,28 +12,28 @@ function onclickChoice(field: string, choice: any): any {
 
     // if toggling a modelName, also toggle the modelStr's that are subsets of it.
     if (field == 'modelName' || field == 'modelSeed' || field == 'modelSteps') {
-        // var matchingModelStrs = uniqueFieldValues.get('modelStr') as Array<string>
-        // for (const [matchIdx, matchChoice] of matchingModelStrs.entries()) {
-        //     if (field == 'modelName' && matchChoice.startsWith(choice as string)) {
-        //         // modelStr that starts with this modelName should be matched.
-        //     }
-        //     else if (field == 'modelSeed') {
-        //         // modelStr that has r{seed} in it should match.
-        //         var seedStr = ` r${choice} `
-        //         if (matchChoice.indexOf(seedStr) == -1) {
-        //             continue;
-        //         }
-        //     }
-        //     else if (field == 'modelSteps' && matchChoice.endsWith(choice as string)) {
-        //         // modelStr that ends with _{steps} should match
-        //     }
-        //     else {
-        //         // everything else shouldn't match.
-        //         continue;
-        //     }
+        var matchingModelStrs = grid.fieldUniqueValues.get('modelStr') as Array<string>
+        for (const [matchIdx, matchChoice] of matchingModelStrs.entries()) {
+            if (field == 'modelName' && matchChoice.startsWith(choice as string)) {
+                // modelStr that starts with this modelName should be matched.
+            }
+            else if (field == 'modelSeed') {
+                // modelStr that has r{seed} in it should match.
+                var seedStr = ` r${choice} `
+                if (matchChoice.indexOf(seedStr) == -1) {
+                    continue;
+                }
+            }
+            else if (field == 'modelSteps' && matchChoice.endsWith(choice as string)) {
+                // modelStr that ends with _{steps} should match
+            }
+            else {
+                // everything else shouldn't match.
+                continue;
+            }
 
-        //     setVisibility('modelStr', matchChoice, visibility)
-        // }
+            grid.setVisibility('modelStr', matchChoice, visibility)
+        }
     }
 }
 
