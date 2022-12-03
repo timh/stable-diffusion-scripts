@@ -1,6 +1,6 @@
-import { GImage, GImageSet } from "./types.js"
+import { GImage, GImageSet, FIELDS } from "./types.js"
 
-function buildImageSets(fields: string[], filenames: string[]): Map<string, GImageSet> {
+function loadImageSets(filenames: string[]): Map<string, GImageSet> {
     const RE_FILENAME = /(.+[\d_]+)--(.+)--([\w\+\d_,]+)\/\d+\.(\d+)\.png/
     const RE_SAMPLER = /([\w\+_]+)_(\d+),c(\d+)/
     const RE_MODEL = /([\w\d\._-]+)_r(\d+)_(\d+)/
@@ -35,7 +35,7 @@ function buildImageSets(fields: string[], filenames: string[]): Map<string, GIma
             }
 
             var iset = new GImageSet(modelName, modelSeed, modelSteps, prompt, sampler, samplerSteps, cfg)
-            var isetKey = iset.getKey(fields)
+            var isetKey = iset.getKey(FIELDS)
             if (imageSets.has(isetKey)) {
                 iset = imageSets.get(isetKey) as GImageSet
             }
@@ -57,4 +57,4 @@ function buildImageSets(fields: string[], filenames: string[]): Map<string, GIma
     return imageSets
 }
 
-export { buildImageSets }
+export { loadImageSets }

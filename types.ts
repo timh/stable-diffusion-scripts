@@ -8,6 +8,9 @@ class GImage {
     }
 }
 
+const FIELDS = ['modelStr', 'modelName', 'modelSeed', 'modelSteps', 'prompt', 'samplerStr', 'cfg']
+// const FIELDS = ['modelStr', 'modelName', 'modelSteps', 'modelSeed', 'prompt', 'samplerStr', 'cfg']
+
 class GImageSet {
     modelStr: string
     modelName: string
@@ -85,6 +88,8 @@ class ColumnHeader {
     }
 }
 
+type Visibility = ("toggle" | "hide" | "show")
+
 function sort(objects): Object[] {
     // javascript sort behavior is ascii, even when used against numbers. use 
     // number-appropriate sort here.
@@ -115,4 +120,4 @@ function createElement(type: string, props = {}, withText = ""): HTMLElement {
     return elem
 }
 
-export { GImage, GImageSet, ColumnHeader, sort, createElement }
+export { GImage, GImageSet, ColumnHeader, Visibility, FIELDS, sort, createElement }
