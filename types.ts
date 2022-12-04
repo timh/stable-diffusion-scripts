@@ -7,6 +7,7 @@ class GImage {
     filename: string
     seed: number
     checked: boolean = false
+    votes: number = 0
 
     constructor(filename: string, seed: number) {
         this.filename = filename
