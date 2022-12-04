@@ -1,7 +1,7 @@
 import { GImage, GImageSet, FIELDS } from "./types.js"
 
 function loadImageSets(filenames: string[]): Map<string, GImageSet> {
-    const RE_FILENAME = /(.+[\d_]+)--(.+)--([\w\+\d_,]+)\/\d+\.(\d+)\.png/
+    const RE_FILENAME = /([^\/]+)--(.+)--(.+)\/\d+\.(\d+)\.png/
     const RE_SAMPLER = /([\w\+_]+)_(\d+),c(\d+)/
     const RE_MODEL = /([\w\d\._-]+)_r(\d+)_(\d+)/
     
