@@ -4,8 +4,8 @@ import sys
 import os
 import os.path
 
-OUTPUTS_DIR = "/workspace/outputs"
-SAMPLES_DIR = "/workspace/output-samples"
+OUTPUTS_DIR = "/home/tim/models"
+SAMPLES_DIR = "."
 
 if __name__ == "__main__":
     # generate directories & filenames of the form that imagegrid looks for..
@@ -23,7 +23,7 @@ if __name__ == "__main__":
             if not all(lambda c: c.isdigit() for c in steps):
                 continue
             
-            link_dir = f"{SAMPLES_DIR}/{model_name}_{int(steps):04}-sample-ddim_50"
+            link_dir = f"{SAMPLES_DIR}/{model_name}_{int(steps):04}--sample--ddim_50"
             os.makedirs(link_dir, exist_ok=True)
 
             samples_dir = f"{steps_dir}/samples"

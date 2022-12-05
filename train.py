@@ -73,7 +73,7 @@ class Config(argparse.Namespace):
                 "--save_infer_steps=50",
                 "--seed", str(seed),
                 "--pretrained_model_name_or_path", input_model_name,
-                #"--pretrained_vae_name_or_path=stabilityai/sd-vae-ft-mse",
+                "--pretrained_vae_name_or_path=stabilityai/sd-vae-ft-mse",
                 "--resolution=512",
                 "--train_batch_size", str(self.train_batch_size),
                 "--train_text_encoder",
