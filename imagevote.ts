@@ -5,6 +5,9 @@ import { GImageGrid } from "./grid.js"
 import { GridHeaders } from "./grid_headers.js"
 
 var grid: GImageGrid
+var allFilenames = new Array<string>()
+var seedMin: number, seedMax: number
+var seedMinMaxSet = false
 
 const STORE_VOTES = new StoredVal('image_votes', new Map<string, number>(), 
                                     storage => Array.from(storage.entries()), jsonVal => new Map(jsonVal as any[]))
@@ -26,13 +29,25 @@ function onclick(filename: string) {
 function renderNext() {
     const width = 3, height = 2
     const wantedCount = width * height
-    const filenames = Array.from(grid.imageByFilename.keys())
 
     var picks = new Array<GImage>()
+    var pickFilenames = new Set<string>() // don't repeat the same filename
 
-    while (picks.length < wantedCount && filenames.length >= picks.length) {
-        const idx = Math.floor(Math.random() * filenames.length)
-        picks.push(grid.imageByFilename.get(filenames[idx])!)
+    var candidates = new Array<string>()
+    var numTries = 0 // ensure we don't loop forever, in case allFilenames doesn't have enough images.
+    while (candidates.length < wantedCount && numTries < 100) {
+        const seed = Math.floor(Math.random() * (seedMax - seedMin)) + seedMin
+        candidates = allFilenames.filter((filename) => grid.imageByFilename.get(filename)!.seed == seed)
+        console.log(`seed ${seed}: candidates.length = ${candidates.length}`)
+        numTries ++
+    }
+    while (picks.length < wantedCount && candidates.length > 0) {
+        const idx = Math.floor(Math.random() * candidates.length)
+        const filename = candidates[idx]
+        if (!pickFilenames.has(filename)) {
+            pickFilenames.add(filename)
+            picks.push(grid.imageByFilename.get(filename)!)
+        }
     }
 
     var gridElem = document.getElementById("grid")
@@ -51,7 +66,10 @@ function renderNext() {
 
 }
 
-function renderVoteStats() {
+const FIELDS_COPY = Array.from(FIELDS)
+FIELDS_COPY.push('seed')
+
+function renderVoteStats(): void {
     var votesElem = document.getElementById("vote_results")
     if (votesElem == null) {
         console.log("votesElem not found")
@@ -59,18 +77,24 @@ function renderVoteStats() {
     }
 
     var html = ""
-    for (const field of FIELDS) {
+    for (const field of FIELDS_COPY) {
         const votes = new Map<string, number>() // value to count
-        var count = 0
 
         for (const filename of STORE_VOTES.get().keys()) {
             const image = grid.imageByFilename.get(filename)
             if (image == null) {
-                console.log(`renderVoteStats: ${filename} not found`)
+                // console.log(`renderVoteStats: ${filename} not found`)
+                // this could happen because the votes local storage is shared across all pages
+                // on the site; IOW, this filename could be from a different directory.
                 continue
             }
-            const iset = grid.imagesetByFilename.get(filename)!
-            const key = iset[field]
+            const iset = grid.imagesetByFilename.get(filename)
+            if (iset == null) {
+                continue
+            }
+            const key = field == 'seed' ? image.seed : iset[field]
+
+            var count = 0
             if (votes.has(key)) {
                 count = votes.get(key)!
             }
@@ -108,10 +132,41 @@ async function loadImages() {
         const filenamesVotes = STORE_VOTES.get()
         for (const [filename, count] of filenamesVotes.entries()) {
             const image = grid.imageByFilename.get(filename)
-            if (image) {
-                image.votes = count
+
+            if (image == null) {
+                continue
+            }
+
+            image.votes = count
+        }
+
+        console.log(`started with ${Array.from(grid.imageByFilename.keys()).length} filenames`)
+        for (const iset of grid.imageSets.values()) {
+            var skip = false
+            for (const field of FIELDS) {
+                const value = iset[field]
+                if (grid.isHidden(field, value)) {
+                    skip = true
+                    break
+                }
+            }
+            if (skip) {
+                continue
+            }
+            for (const img of iset.images) {
+                allFilenames.push(img.filename)
+                if (!seedMinMaxSet) {
+                    seedMin = img.seed
+                    seedMax = img.seed
+                    seedMinMaxSet = true
+                }
+                else {
+                    seedMin = Math.min(seedMin, img.seed)
+                    seedMax = Math.max(seedMax, img.seed)
+                }
             }
         }
+        console.log(`now have ${allFilenames.length} filenames`)
     }
     else {
         console.log("error")
@@ -120,6 +175,15 @@ async function loadImages() {
 
 loadImages().then((val) => {
     console.log("loaded images.")
+
+    document.onkeydown = (ev) => {
+        if (ev.code == 'Space') {
+            renderNext()
+            ev.stopPropagation()
+            return false
+        }
+        return true
+    }
 
     renderVoteStats()
     renderNext()
