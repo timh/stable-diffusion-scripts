@@ -32,7 +32,8 @@ def gen_renders(config: argparse.Namespace):
                                     prompt=prompt, negative_prompt=negative_prompt,
                                     model_dir=model, 
                                     sampler_str=sampler, guidance_scale=cfg,
-                                    seed=config.base_seed, num_images=config.num_images)
+                                    seed=config.base_seed, num_images=config.num_images,
+                                    width=config.width, height=config.height)
                     yield one
 
 def gen(image_gen: txt2img.ImageGenerator, config: argparse.Namespace):
@@ -67,6 +68,8 @@ def gen(image_gen: txt2img.ImageGenerator, config: argparse.Namespace):
                     'sampler_steps': one.sampler_steps,
                     'guidance_scale': one.guidance_scale,
                     'base_seed': config.base_seed,
+                    'width': config.width,
+                    'height': config.height,
                 }
                 stats['timing'] = {
                     'total': (time_end - time_start),
@@ -86,6 +89,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", dest='base_seed', type=int, default=0)
     parser.add_argument("--cfg", dest='cfgs', nargs='+', action='append', help="guidance scale")
     parser.add_argument("--batch", dest='batch_size', type=int, default=1, help="num images to generate in parallel")
+    parser.add_argument("--width", dest="width", type=int, default=0)
+    parser.add_argument("--height", dest="height", type=int, default=0)
     parser.add_argument("-f", dest="filename", help="read command line arguments from file") # dummy so the help shows this argument
 
     # support loading from a file with "-f filename". using parser.add_argument for

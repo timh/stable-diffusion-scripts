@@ -62,7 +62,7 @@ class Config(argparse.Namespace):
 
         dreambooth_py: str = "train_inpainting_dreambooth.py" if "inpainting" in self.input_model_name else "train_dreambooth.py"
         args = ["accelerate", "launch",
-                "--num_cpu_threads_per_process", "8",
+                "--num_cpu_threads_per_process", "4",
                 dreambooth_py,
                 "--output_dir", output_dir,
                 "--instance_data_dir", self.instance_dir,
@@ -84,8 +84,7 @@ class Config(argparse.Namespace):
                 "--use_8bit_adam",
                 "--lr_scheduler", self.lr_scheduler,
                 "--lr_warmup_steps=0",
-                "--max_train_steps", str(max_train_steps),
-                "--mixed_precision=fp16"]
+                "--max_train_steps", str(max_train_steps)]
 
         if self.class_prompt is not None:
             args.extend(["--class_prompt", self.class_prompt])
@@ -113,7 +112,7 @@ class Config(argparse.Namespace):
             print(res.stdout)
 
             # write the config we used for this
-            for steps in range(self.save_interval, max_train_steps+1, self.save_interval):
+            for steps in range(self.save_min_steps, max_train_steps+1, self.save_interval):
                 dirname = f"{output_dir}/{steps}"
                 filename = f"{dirname}/train-cmdline.txt"
                 os.makedirs(dirname, exist_ok=True)

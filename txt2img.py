@@ -52,6 +52,8 @@ class ImageSet:
     negative_prompt: str
     num_images: int
     seed: int
+    width: int
+    height: int
 
     def __init__(self,
                  prompt: str, model_dir: str, 
@@ -59,7 +61,8 @@ class ImageSet:
                  model_str: str = "",
                  root_output_dir: str = ".", 
                  sampler_str: str = "dpm++1:20",
-                 guidance_scale: float = 7, num_images: int = 1, seed: int = 0):
+                 guidance_scale: float = 7, num_images: int = 1, seed: int = 0,
+                 width: int = 0, height: int = 0):
         self.model_dir = model_dir
 
         if not model_str and model_dir:
@@ -82,7 +85,14 @@ class ImageSet:
         self.num_images = num_images
         self.seed = seed
 
-        self.output_dir = f"{root_output_dir}/{self.model_str}--{self.prompt}--{self.sampler_name}_{self.sampler_steps},c{self.guidance_scale:02}"
+        self.width = width
+        self.height = height
+
+        prompt_str = self.prompt
+        if self.negative_prompt:
+            prompt_str += f"+{negative_prompt}"
+
+        self.output_dir = f"{root_output_dir}/{self.model_str}--{prompt_str}--{self.sampler_name}_{self.sampler_steps},c{self.guidance_scale:02}"
 
         if self.sampler_name not in SCHEDULERS:
             raise Exception(f"unknown scheduler '{self.sampler_name}'")
@@ -121,6 +131,7 @@ class ImageGenerator:
         if image_set.model_dir != self.last_model_dir:
             self.pipeline = StableDiffusionPipeline.from_pretrained(image_set.model_dir, revision="fp16", torch_dtype=torch.float16, safety_checker=None)
             self.pipeline = self.pipeline.to("cuda")
+            self.last_model_dir = image_set.model_dir
 
         if image_set.sampler_name != self.last_sampler_name or self.pipeline.scheduler is None:
             scheduler_fun = SCHEDULERS[image_set.sampler_name]
@@ -134,6 +145,12 @@ class ImageGenerator:
             num_existing = image_set.num_images - num_needed
             print(f"{num_existing + 1}/{image_set.num_images}: {needed_filenames[0]}")
 
+            kwargs = {}
+            if image_set.width != 0:
+                kwargs['width'] = image_set.width
+            if image_set.height != 0:
+                kwargs['height'] = image_set.height
+            
             seed = image_set.seed + num_existing
             generator = torch.Generator("cuda").manual_seed(seed)
             images: List[PIL.Image.Image] = \
@@ -142,7 +159,8 @@ class ImageGenerator:
                               generator=generator,
                               guidance_scale=image_set.guidance_scale, 
                               num_inference_steps=image_set.sampler_steps,
-                              num_images_per_prompt=num_batch).images
+                              num_images_per_prompt=num_batch,
+                              **kwargs).images
 
             for idx in range(num_batch):
                 info = {
