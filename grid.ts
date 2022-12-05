@@ -83,8 +83,13 @@ class GImageGrid {
             else {
                 newHidden = !curHidden
             }
-    
-            span.className = newHidden ? "" : "selected"
+
+            if (newHidden) {
+                span.className = span.className + " deselected"
+            }
+            else {
+                span.className = span.className.replace(" deselected", "")
+            }
     
             for (const el of document.getElementsByClassName(className)) {
                 if (newHidden) {
@@ -120,8 +125,6 @@ class GImageGrid {
             this.setVisibility(field as string, value, "hide")
         }
     }
-
-    
 }
 
 

@@ -12,32 +12,30 @@ function onclickChoice(field: string, choice: any): any {
 
     // if toggling a modelName, also toggle the modelStr's that are subsets of it.
     if (field == 'modelName' || field == 'modelSeed' || field == 'modelSteps') {
-        var matchingModelStrs = grid.fieldUniqueValues.get('modelStr') as Array<string>
-        for (const [matchIdx, matchChoice] of matchingModelStrs.entries()) {
-            if (field == 'modelName' && matchChoice.startsWith(choice as string)) {
+        var candidates = grid.fieldUniqueValues.get('modelStr') as Array<string>
+        for (const candidate of candidates) {
+            if (field == 'modelName' && candidate.startsWith(choice.toString())) {
                 // modelStr that starts with this modelName should be matched.
             }
-            else if (field == 'modelSeed') {
+            else if (field == 'modelSeed' && candidate.includes(` r${choice} `)) {
                 // modelStr that has r{seed} in it should match.
-                var seedStr = ` r${choice} `
-                if (matchChoice.indexOf(seedStr) == -1) {
-                    continue;
-                }
             }
-            else if (field == 'modelSteps' && matchChoice.endsWith(choice as string)) {
-                // modelStr that ends with _{steps} should match
+            else if (field == 'modelSteps' && candidate.endsWith(` ${choice}`)) {
+                // modelStr that ends with ' {steps}' should match
             }
             else {
                 // everything else shouldn't match.
                 continue;
             }
 
-            grid.setVisibility('modelStr', matchChoice, visibility)
+            grid.setVisibility('modelStr', candidate, visibility)
         }
     }
+    // renderAllChoices()
 }
 
 function renderAllChoices() {
+    document.getElementById('chooser')!.innerHTML = ""
     for (const field of FIELDS) {
         renderChoices(field)
     }
@@ -57,15 +55,12 @@ function renderChoices(field: string) {
     chooserDiv.appendChild(span)
 
     for (const [idx, choice] of choices.entries()) {
-        var choiceSpan = document.createElement("span")
-        var fieldClass = `${field}_${idx}`
-        choiceSpan.className = "selected"
-        choiceSpan.id = `choice_${fieldClass}`
+        var id = `choice_${field}_${idx}`
+        var choiceSpan = createElement('span', {'class': "value", 'id': id}, choice.toString())
 
         choiceSpan.onclick = function(this: GlobalEventHandlers, ev: MouseEvent): any {
             onclickChoice(field, choice)
         }
-        choiceSpan.appendChild(document.createTextNode(choice.toString()))
         span.appendChild(choiceSpan)
     }
 }
@@ -80,8 +75,8 @@ function onclickThumbnail(ev: MouseEvent, filename: string) {
     var isChecked = image.checked
     var newChecked = !isChecked
 
-    var imgElement = ev.target as HTMLElement
-    var selectElem = imgElement.parentElement?.getElementsByClassName("image_select")?.item(0)
+    var imgElem = ev.target as HTMLElement
+    var selectElem = imgElem.parentElement?.getElementsByClassName("image_select")?.item(0)
     if (selectElem == null) {
         console.log(`onclickThumbnail: logic error: can't find image_select span for filename ${filename}`)
         return
@@ -114,7 +109,7 @@ function renderCheckStats() {
         for (const filename of STORE_CHECKED.get()) {
             var iset = grid.imagesetByFilename.get(filename)
             if (iset == null) {
-                console.log(`renderCheckStats: can't find imageset for filename ${filename}`)
+                // console.log(`renderCheckStats: can't find imageset for filename ${filename}`)
                 continue
             }
             const fieldVal = iset[field]
@@ -170,7 +165,8 @@ function renderGridHeaders() {
     var allSeeds = sort(allSeedsSet)
     for (const [idx, seed] of allSeeds.entries()) {
         var span = createElement('span', {}, seed.toString())
-        span.style.gridRow = (idx + FIELDS.length + 1).toString()
+        const row = (idx + FIELDS.length + 1)
+        span.style.gridRow = row.toString()
         span.style.gridColumn = "1"
         gridElem.appendChild(span)
     }        
@@ -187,24 +183,26 @@ function renderGridImages() {
             return `${field}_${grid.fieldValueIndex.get(field)?.get(val)}`
         }).join(" ")
 
+        const className = `image ${classes}`
         for (const [imageIdx, image] of iset.images.entries()) {
-            var row = imageIdx + FIELDS.length + 1
+            const row = imageIdx + FIELDS.length + 1
             
-            var topSpan = createElement('span', {'class': `image ${classes}`})
-            topSpan.style.gridRow = row.toString()
-            topSpan.style.gridColumn = column.toString()
-            var selectElem = topSpan.appendChild(createElement('span', {'class': 'image_select'}, "checked"))
+            var imageSpan = createElement('span', {'class': className})
+            imageSpan.style.gridRow = row.toString()
+            imageSpan.style.gridColumn = column.toString()
+    
+            var selectElem = imageSpan.appendChild(createElement('span', {'class': "image_select"}, "checked"))
             if (image.checked) {
                 selectElem.className += " checked"
             }
 
-            var thumbElem = topSpan.appendChild(createElement('img', {'src': image.filename, 'class': "thumbnail"}))
+            var thumbElem = imageSpan.appendChild(createElement('img', {'src': image.filename, 'class': "thumbnail"}))
             thumbElem.onclick = function(this, ev) {
                 onclickThumbnail(ev, image.filename)
             }
 
-            var detailsSpan = topSpan.appendChild(createElement('span', {'class': "details"}))
-            var imageElem = detailsSpan.appendChild(createElement('img', {'src': image.filename, 'class': "fullsize"}))
+            var detailsSpan = imageSpan.appendChild(createElement('span', {'class': "details"}))
+            var fullsizeElem = detailsSpan.appendChild(createElement('img', {'src': image.filename, 'class': "fullsize"}))
             var detailsGrid = detailsSpan.appendChild(createElement('div', {'class': "details_grid"}))
 
             var entries = {"model": iset.modelStr, "prompt": iset.prompt, 
@@ -220,10 +218,9 @@ function renderGridImages() {
                 detailsGrid.appendChild(valueSpan)
             }
 
-            gridElem.appendChild(topSpan)
+            gridElem.appendChild(imageSpan)
         }
     }
-
 }
 
 async function loadImages() {

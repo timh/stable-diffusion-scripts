@@ -10,13 +10,13 @@
   margin: 2px;
 }
 
-#imagegrid .image:hover img.thumbnail {
-  /* visibility: hidden; */
-  position: absolute;
-}
-
-#imagegrid .image span.image_select {
+/* #imagegrid .image:hover img.thumbnail {
   visibility: hidden;
+  position: absolute;
+} */
+
+#imagegrid span.image span.image_select {
+  display: none;
   position: absolute;
   color: greenyellow;
   background-color: black;
@@ -24,19 +24,19 @@
   padding: 5px;
   z-index: 1;
 }
-#imagegrid .image span.image_select.checked {
-  visibility: visible;
+#imagegrid span.image span.image_select.checked {
+  display: block;
 }
-#imagegrid .image.hidden span.image_select.checked {
+#imagegrid  span.image.hidden span.image_select.checked {
   /* ensure that the check marks are hidden when the image is hidden */
-  visibility: hidden;
+  display: none;
 }
 
 #imagegrid span.image span.details {
   position: absolute;
   visibility: hidden;
-  margin-top: 40px;
-  margin-left: 40px;
+  margin-top: 60px;
+  margin-left: -68px; /* -128px + 60px */
   width: max-content;
   height: max-content;
   padding: 5px;
@@ -93,19 +93,20 @@
 
 #chooser .values {
   grid-column: 2;
-  line-height: 1.6;
 }
 
-#chooser .values span {
-  background-color: gray;
-  color: white;
+#chooser .values .value {
+  display: inline-block;
   border-radius: 5px;
   margin-right: 10px;
+  margin-bottom: 2px;
   padding: 3px;
+  background-color: green;
+  color: white;
 }
 
-#chooser .values span.selected {
-  background-color: green;
+#chooser .values .value.deselected {
+  background-color: gray;
   color: white;
 }
 
