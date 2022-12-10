@@ -38,9 +38,10 @@ class Config(argparse.Namespace):
         
         max_steps: int = 0
         for dirname in os.listdir(output_dir):
-            if not all([c.isdigit() for c in dirname]):
+            if not dirname.startswith("checkpoint-"):
                 continue
-            max_steps = max(max_steps, int(dirname))
+            steps = int(dirname.split("-")[-1])
+            max_steps = max(max_steps, steps)
         
         return max_steps
     
@@ -49,11 +50,11 @@ class Config(argparse.Namespace):
 
         output_dir_base = self._output_dir(seed)
         prior_steps = self._find_prior_steps_trained(output_dir_base)
-        max_train_steps:int = self.max_train_steps - prior_steps
+        max_train_steps = self.max_train_steps - prior_steps
         output_dir = output_dir_base
         if prior_steps != 0:
             print(f"{output_dir_base}: found existing model with {prior_steps} steps already trained")
-            input_model_name = f"{output_dir_base}/{prior_steps}"
+            input_model_name = f"{output_dir_base}/checkpoint-{prior_steps}"
             output_dir = f"{output_dir_base}+{prior_steps}"
         
         if max_train_steps <= 0:
@@ -68,22 +69,24 @@ class Config(argparse.Namespace):
                 "--instance_data_dir", self.instance_dir,
                 "--instance_prompt", self.instance_prompt,
                 "--learning_rate", str(self.learning_rate),
-                "--save_interval", str(self.save_interval),
-                "--save_min_steps", str(self.save_min_steps),
-                "--save_infer_steps=50",
+                # "--save_interval", str(self.save_interval),
+                "--save_steps", str(self.save_interval),
+                # "--save_min_steps", str(self.save_min_steps),
+                # "--save_infer_steps=50",
+                # "--n_save_sample=10",
                 "--seed", str(seed),
                 "--pretrained_model_name_or_path", input_model_name,
-                "--pretrained_vae_name_or_path=stabilityai/sd-vae-ft-mse",
-                "--resolution=512",
+                # "--pretrained_vae_name_or_path=stabilityai/sd-vae-ft-mse",
+                # "--resolution=512",
                 "--train_batch_size", str(self.train_batch_size),
                 "--train_text_encoder",
                 "--sample_batch_size=1",
-                "--n_save_sample=10",
-                "--gradient_accumulation_steps=2",
+                "--gradient_accumulation_steps=1",
                 "--gradient_checkpointing",
                 "--use_8bit_adam",
                 "--lr_scheduler", self.lr_scheduler,
                 "--lr_warmup_steps=0",
+                "--mixed_precision=fp16",
                 "--max_train_steps", str(max_train_steps)]
 
         if self.class_prompt is not None:
@@ -95,38 +98,49 @@ class Config(argparse.Namespace):
         if "inpainting" in self.input_model_name:
             args.append("--not_cache_latents")
         else:
-            args.extend(["--save_sample_prompt", self.instance_prompt])
+            # args.extend(["--save_sample_prompt", self.instance_prompt])
+            pass
 
 
         print(f"run_one:")
-        print(f"       output_dir: {output_dir}")
-        print(f"  max_train_steps: {self.max_train_steps}")
-        print(f"     instance_dir: {self.instance_dir}")
-        print(f"   instance_prompt: {self.instance_prompt}")
-        print(f"         class_dir: {self.class_dir}")
-        print(f"      class_prompt: {self.class_prompt}")
-        print(f"              args: {args_to_quoted_str(args)}")
+        print(f"     output_dir: {output_dir}")
+        print(f"max_train_steps: {self.max_train_steps}")
+        print(f"   instance_dir: {self.instance_dir}")
+        print(f"instance_prompt: {self.instance_prompt}")
+        print(f"      class_dir: {self.class_dir}")
+        print(f"   class_prompt: {self.class_prompt}")
+        print(f"           args: {args_to_quoted_str(args)}")
 
         if not self.dry_run:
             res = subprocess.run(args, stdout=sys.stdout, stderr=sys.stderr, check=True)
             print(res.stdout)
 
-            # write the config we used for this
+            src = [f"{output_dir}/{filename}" for filename in os.listdir(output_dir) if filename != "logs" and not filename.startswith("checkpoint-")]
+            dest = f"{output_dir}/checkpoint-{self.max_train_steps}"
+            if len(src) > 0:
+                print(f"run_one: move [{' '.join(src)}] to {dest}")
+                os.makedirs(dest, exist_ok=True)
+                args = ["mv", *src, dest]
+                res = subprocess.run(args, check=True)
+
+            # write the config we're using for this
             for steps in range(self.save_min_steps, max_train_steps+1, self.save_interval):
-                dirname = f"{output_dir}/{steps}"
+                dirname = f"{output_dir}/checkpoint-{steps}"
+
                 filename = f"{dirname}/train-cmdline.txt"
-                os.makedirs(dirname, exist_ok=True)
+                # os.makedirs(dirname, exist_ok=True)
                 with open(filename, "w") as output:
                     output.write(f"{dreambooth_py}:\n")
                     output.write(f"# {args_to_quoted_str(args)}\n")
                     output.write(f"\n")
                     output.write(f"train.py:\n")
                     output.write(f"# {args_to_quoted_str(sys.argv[1:])}\n")
-        
+
+
         if prior_steps != 0:
             for steps in range(self.save_interval, max_train_steps+1, self.save_interval):
-                src = f"{output_dir}/{steps}"
-                dest = f"{output_dir_base}/{steps + prior_steps}"
+                src = f"{output_dir}/checkpoint-{steps}"
+                dest = f"{output_dir_base}/checkpoint-{steps + prior_steps}"
                 args = ["mv", src, dest]
 
                 print(f"run_one: prior steps: moving {src} to {dest}")
@@ -148,8 +162,8 @@ def parse_args() -> Config:
     parser.add_argument("--noclass", action='store_true', help="must pass this if no class dir/prompt is included")
     parser.add_argument("--instance_dir", required=True, help="instance images directory")
     parser.add_argument("--instance_prompt", required=True, help="instance prompt")
-    parser.add_argument("--learning_rate", "--lr", "-l", default="1e-6", help="learning rate")
-    parser.add_argument("--lr_scheduler", default="cosine", help="scheduler type: constant, linear, cosine")
+    parser.add_argument("--learning_rate", "--lr", "-l", default="2e-6", help="learning rate")
+    parser.add_argument("--lr_scheduler", default="polynomial", help="scheduler type: constant, linear, cosine, polynomial")
     parser.add_argument("--seeds", "-S", default="1", help="random seeds (comma separated for multiple)")
     parser.add_argument("--steps", "-s", dest='max_train_steps', type=int, required=True, default=2000, help="number of training steps")
     parser.add_argument("--model", dest='input_model_name', default="runwayml/stable-diffusion-v1-5", help="name or path for base model")
