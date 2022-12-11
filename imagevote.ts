@@ -1,4 +1,4 @@
-import { GImage, GImageSet, ColumnHeader, FIELDS, sort, createElement } from "./types.js"
+import { GImage, GImageSet, FIELDS, sort, createElement } from "./types.js"
 import { loadImageSets } from "./build.js"
 import { StoredVal } from "./storage.js"
 import { GImageGrid } from "./grid.js"

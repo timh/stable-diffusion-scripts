@@ -1,72 +1,79 @@
-import { GImageSet, ColumnHeader, FIELDS, createElement, sort } from "./types.js"
+import { GImageSet, FIELDS, createElement, sort } from "./types.js"
 import { GImageGrid } from "./grid.js"
+
+class GridHeader {
+    rowStart: number = 1
+    rowEnd: number = 1
+    values: Map<string, string | number>
+    classes: string = ""
+
+    constructor(values: Map<string, string | number>, row: number) {
+        this.values = values
+        this.rowStart = this.rowEnd = row
+    }
+
+    copy(): GridHeader {
+        const res = new GridHeader(new Map(), 0)
+        res.rowStart = this.rowStart
+        res.rowEnd = this.rowEnd
+
+        for (const key of this.values.keys()) {
+            res.values.set(key, this.values.get(key)!)
+        }
+
+        return res
+    }
+}
 
 class GridHeaders {
     grid: GImageGrid
-    headers: ColumnHeader[]
+    headers: GridHeader[]
 
     constructor(grid: GImageGrid) {
         this.grid = grid
         this.update()
     }
 
-    update(): ColumnHeader[] {
-        var lastHeaders = new Map<string, ColumnHeader>() // current header by field
-        var headers = new Array<ColumnHeader>()
+    update(): GridHeader[] {
+        const headers = new Array<GridHeader>()   // return
+        const lastValues = new Map<string, string | number>()
 
-        // walk through image sets in order, building the columns out
+        var curHeader: GridHeader | null = null
+
+        // build out rows with only the changing fields in them.
         for (const [isetIdx, isetKey] of this.grid.imageSetKeys.entries()) {
             const iset = this.grid.imageSets.get(isetKey)!
 
+            // make no more than one new header per iset
+            var madeNewHeader = false
             for (const [idx, field] of FIELDS.entries()) {
                 if (field == "modelStr") {
                     continue;
                 }
-                var header = lastHeaders.get(field)
-                if (header == null || header?.value != iset![field]) {
-                    const column = (header != null) ? header.columnEnd : 2
-                    header = new ColumnHeader(idx + 1, field, iset![field], column)
-                    lastHeaders.set(field, header)
-                    headers.push(header)
+
+                const curValue = iset[field]!
+                const lastValue = lastValues.get(field)
+
+                if (field == "modelName") {
+                    console.log(`madeNewHeader ${madeNewHeader}, curValue ${curValue}, lastValue ${lastValue}, curHeader.rowEnd ${curHeader?.rowEnd}`)
                 }
-                header.columnEnd ++
+
+                if (!madeNewHeader && (curHeader == null || curValue != lastValue)) {
+                    const row = curHeader != null ? curHeader.rowEnd : 2
+                    curHeader = new GridHeader(new Map(), row)
+                    headers.push(curHeader)
+                    madeNewHeader = true
+                }
+
+                if (lastValue != curValue) {
+                    curHeader!.values.set(field, curValue)
+                }
+                lastValues.set(field, curValue)
             }
+            curHeader!.rowEnd ++
         }
 
-        // now walk through the headers again. add classes to each of the headers such that it 
-        // correctly nests within the appropriate other headers.
-        var curFieldValues = new Map<String, any>()
-        var curFieldColumnEnds = new Map<String, number>()
-        var headersToUpdate = new Array<ColumnHeader>()
-        var curColumn = 2
-        for (var i = 0; i <= headers.length; i ++) {
-            var header = i < headers.length ? headers[i] : undefined;
-            if (header == null || header.columnStart > curColumn) {
-                while (headersToUpdate.length > 0) {
-                    const toUpdate = headersToUpdate.pop()!
-                    var classes = new Array<String>()
-                    for (const field of FIELDS) {
-                        // do not add a class to toUpdate if its end column is higher
-                        // than the driving header (header)
-                        if (toUpdate.columnEnd > curFieldColumnEnds.get(field)!) {
-                            continue
-                        }
-                        var value = curFieldValues.get(field)!
-                        var valueIndex = this.grid.fieldValueIndex.get(field)!.get(value)!
-                        classes.push(`${field}_${valueIndex}`)
-                    }
-                    toUpdate.classes = classes.join(" ")
-                }
-            }
-            if (header != null) {
-                // keep track of current value for each field, and the column that
-                // that value ends on. build up a list of headers that need to be updated.
-                curFieldValues.set(header.field, header.value)
-                curFieldColumnEnds.set(header.field, header.columnEnd)
-                curColumn = header.columnStart
-                headersToUpdate.push(header)
-            }
-        }
+
         this.headers = headers
         return this.headers
     }
