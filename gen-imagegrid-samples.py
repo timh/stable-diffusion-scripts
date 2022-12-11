@@ -42,7 +42,3 @@ if __name__ == "__main__":
                 if not os.path.islink(link_filename):
                     os.system(f"ln -sfv {sample_filename} {link_filename}")
     
-    # then call imagegrid on the output so we can look at them all together.
-    os.chdir(SAMPLES_DIR)
-    os.system(f"python /scripts/imagegrid.py {' '.join(sys.argv[1:])}> imagegrid.html")
-
