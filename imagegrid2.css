@@ -4,6 +4,12 @@
   grid-template-rows: min-content;
 }
 
+#imagegrid .header {
+  font-size: medium;
+  font-family: 'Arial Narrow', Arial, sans-serif;
+  padding: 5px;
+}
+
 #imagegrid .image img.thumbnail {
   width: 128px;
   height: 128px;

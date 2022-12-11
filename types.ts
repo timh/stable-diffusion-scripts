@@ -1,7 +1,8 @@
 type Visibility = ("toggle" | "hide" | "show")
 
-const FIELDS = ['modelStr', 'modelName', 'modelSeed', 'modelSteps', 'prompt', 'samplerStr', 'cfg']
-// const FIELDS = ['modelStr', 'modelName', 'modelSteps', 'modelSeed', 'prompt', 'samplerStr', 'cfg']
+// const FIELDS = ['prompt', 'modelName', 'cfg', 'modelStr', 'modelSeed', 'modelSteps', 'samplerStr']
+// const FIELDS = ['prompt', 'modelSteps', 'modelStr', 'modelName', 'modelSeed', 'samplerStr', 'cfg']
+const FIELDS = ['prompt', 'modelStr', 'modelName', 'modelSteps', 'modelSeed', 'samplerStr', 'cfg']
 
 class GImage {
     filename: string

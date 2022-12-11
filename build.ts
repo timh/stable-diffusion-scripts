@@ -3,7 +3,13 @@ import { GImage, GImageSet, FIELDS } from "./types.js"
 function loadImageSets(filenames: string[]): Map<string, GImageSet> {
     const RE_FILENAME = /([^\/]+)--(.+)--(.+)\/\d+\.(\d+)\.png/
     const RE_SAMPLER = /([\w\+_]+)_(\d+),c(\d+)/
-    const RE_MODEL = /([\w\d\._-]+)_r(\d+)_(\d+)/
+
+    // alex44-0.9e-6-f222_r0_9000
+    const RE_MODEL = /^([\w\d_\.\-\+]+)_r(\d+)_(\d+)$/
+
+    // alex44-everydream-e01_00440
+    // output_alex22_768-sd21@4.0_3300
+    const RE_MODEL_EVERYDREAM = /^([\w\d@_\-\+\.]+)_(\d+)$/
     
     var imageSets = new Map<string, GImageSet>()
     for (const filename of filenames) {
@@ -33,6 +39,19 @@ function loadImageSets(filenames: string[]): Map<string, GImageSet> {
                 modelSeed = parseInt(match[2])
                 modelSteps = parseInt(match[3])
             }
+            else {
+                match = RE_MODEL_EVERYDREAM.exec(modelStr)
+                if (match) {
+                    modelName = match[1]
+                    modelSteps = parseInt(match[2])
+                }
+            }
+
+            modelName = modelName.replace("-batch", " batch")
+            modelName = modelName.replace("-cap", " cap")
+            modelName = modelName.replace("-bf16", " bf16")
+            modelName = modelName.replace("-f222", " f222")
+            modelName = modelName.replace("-f222v", " f222v")
 
             var iset = new GImageSet(modelName, modelSeed, modelSteps, prompt, sampler, samplerSteps, cfg)
             var isetKey = iset.getKey(FIELDS)

@@ -19,9 +19,9 @@ ENV CONDA_DEFAULT_ENV=diffusers
 ENV PATH=/opt/conda/envs/diffusers/bin:$PATH
 WORKDIR /workspace/diffusers
 #RUN --mount=type=cache,target=/opt/conda/envs,id=conda_diffusers \
-RUN conda install pip pytorch torchvision pytorch-cuda=11.6 transformers jupyterlab -c pytorch -c nvidia && \
+RUN conda install pip pytorch torchvision pytorch-cuda=11.6 transformers jupyterlab ftfy tensorboard -c pytorch -c nvidia && \
     conda install xformers -c xformers/label/dev && \
-    pip install accelerate bitsandbytes tensorboard && \
+    pip install accelerate bitsandbytes && \
     pip install -e .
 
 # class images for dreambooth training

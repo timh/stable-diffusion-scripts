@@ -10,7 +10,8 @@ class GImageGrid {
     imageSets: Map<string, GImageSet>                 // image sets by key
     imageSetKeys: Array<string>                       // sorted
     fieldUniqueValues: Map<string, Array<Object>>     // unique sorted values for each field
-    fieldValueIndex: Map<String, Map<Object, number>> // index in this._fieldUniqueValues for each field, value
+    fieldValueIndex: Map<String, Map<Object, number>> // index in this.fieldUniqueValues for each field, value
+
 
     constructor(imageSets: Map<string, GImageSet>) {
         this.update(imageSets)
@@ -63,7 +64,10 @@ class GImageGrid {
     setVisibility(field: string, value: any, visibility: Visibility): Visibility {
         var index = this.fieldValueIndex.get(field)?.get(value)
         if (index == undefined) {
-            console.log(`can't find index for ${field} ${value}`)
+            // This happens if we come across a key we don't know about. This happens when
+            // imagegrid is run in directory A, but local storage has keys for a different
+            // directory "B". IOW, it's not a problem worth logging about.
+            // console.log(`can't find index for ${field} ${value}`)
             return "toggle"
         }
     

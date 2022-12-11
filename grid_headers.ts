@@ -15,20 +15,23 @@ class GridHeaders {
         var headers = new Array<ColumnHeader>()
 
         // walk through image sets in order, building the columns out
-        this.grid.imageSetKeys.forEach((setKey) => {
-            var imgSet = this.grid.imageSets.get(setKey) as GImageSet
+        for (const [isetIdx, isetKey] of this.grid.imageSetKeys.entries()) {
+            const iset = this.grid.imageSets.get(isetKey)!
 
             for (const [idx, field] of FIELDS.entries()) {
+                if (field == "modelStr") {
+                    continue;
+                }
                 var header = lastHeaders.get(field)
-                if (header == null || header?.value != imgSet![field]) {
-                    var column = (header != null) ? header.columnEnd : 2
-                    header = new ColumnHeader(idx + 1, field, imgSet![field], column)
+                if (header == null || header?.value != iset![field]) {
+                    const column = (header != null) ? header.columnEnd : 2
+                    header = new ColumnHeader(idx + 1, field, iset![field], column)
                     lastHeaders.set(field, header)
                     headers.push(header)
                 }
                 header.columnEnd ++
             }
-        })
+        }
 
         // now walk through the headers again. add classes to each of the headers such that it 
         // correctly nests within the appropriate other headers.
@@ -37,7 +40,7 @@ class GridHeaders {
         var headersToUpdate = new Array<ColumnHeader>()
         var curColumn = 2
         for (var i = 0; i <= headers.length; i ++) {
-            var header = i < headers.length ? headers[i] : null;
+            var header = i < headers.length ? headers[i] : undefined;
             if (header == null || header.columnStart > curColumn) {
                 while (headersToUpdate.length > 0) {
                     const toUpdate = headersToUpdate.pop()!
