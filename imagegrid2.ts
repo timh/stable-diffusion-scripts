@@ -147,7 +147,8 @@ function renderGridHeaders() {
     const gridElem = document.getElementById("imagegrid") as HTMLElement
     gridElem.innerHTML = ""
     gridHeaders.headers.forEach((header) => {
-        const span = createElement('span', {'class': `header ${header.classes}`})
+        const classes = "header " + Array.from(header.classes).join(" ")
+        const span = createElement('span', {'class': classes})
         span.style.gridColumnStart = "1"
         span.style.gridColumnEnd = "3"
         span.style.gridRowStart = header.rowStart.toString()

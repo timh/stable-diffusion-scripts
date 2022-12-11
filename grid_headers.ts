@@ -5,11 +5,12 @@ class GridHeader {
     rowStart: number = 1
     rowEnd: number = 1
     values: Map<string, string | number>
-    classes: string = ""
+    classes: Set<string>
 
     constructor(values: Map<string, string | number>, row: number) {
         this.values = values
         this.rowStart = this.rowEnd = row
+        this.classes = new Set()
     }
 
     copy(): GridHeader {
@@ -73,6 +74,22 @@ class GridHeaders {
             curHeader!.rowEnd ++
         }
 
+        // while values on a header are only what's different from previous, the classes are complete:
+        // there is a class for each field including what's the same as the prior header.
+        lastValues.clear()
+        for (const header of headers) {
+            for (const field of FIELDS) {
+                const curValue = header.values.get(field) || lastValues.get(field)
+                const valueIndex = this.grid.fieldValueIndex.get(field)?.get(curValue!)
+                if (valueIndex != undefined) {
+                    header!.classes.add(`${field}_${valueIndex}`)
+                }
+                else {
+                    console.log(`can't find valueIndex for ${field}=${curValue}; all values = ${this.grid.fieldValueIndex.get(field)}`)
+                }
+                lastValues.set(field, curValue)
+            }
+        }
 
         this.headers = headers
         return this.headers
