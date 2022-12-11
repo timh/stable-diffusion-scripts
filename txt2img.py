@@ -67,7 +67,7 @@ class ImageSet:
 
         if not model_str and model_dir:
             path_components = model_dir.split("/")
-            last_component = path_components[-1]
+            last_component = path_components[-1].replace("checkpoint-", "")
             if len(path_components) >= 2 and all([c.isdigit() for c in last_component]):
                 model_steps = last_component
                 model_name = path_components[-2]

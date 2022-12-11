@@ -61,6 +61,13 @@ class Config(argparse.Namespace):
             print(f"** nothing to do, max_train_steps is {max_train_steps}")
             return
 
+        class_args: List[str] = []
+        if self.class_prompt is not None:
+            class_args.extend(["--class_prompt", self.class_prompt])
+            class_args.extend(["--class_data_dir", self.class_dir])
+            class_args.append("--with_prior_preservation")
+            class_args.append("--prior_loss_weight=1.0")
+
         dreambooth_py: str = "train_inpainting_dreambooth.py" if "inpainting" in self.input_model_name else "train_dreambooth.py"
         args = ["accelerate", "launch",
                 "--num_cpu_threads_per_process", "4",
@@ -68,9 +75,13 @@ class Config(argparse.Namespace):
                 "--output_dir", output_dir,
                 "--instance_data_dir", self.instance_dir,
                 "--instance_prompt", self.instance_prompt,
+                *class_args,
                 "--learning_rate", str(self.learning_rate),
-                # "--save_interval", str(self.save_interval),
+                "--lr_scheduler", self.lr_scheduler,
+                "--train_batch_size", str(self.train_batch_size),
+                "--max_train_steps", str(max_train_steps),
                 "--save_steps", str(self.save_interval),
+                # "--save_interval", str(self.save_interval),
                 # "--save_min_steps", str(self.save_min_steps),
                 # "--save_infer_steps=50",
                 # "--n_save_sample=10",
@@ -78,29 +89,19 @@ class Config(argparse.Namespace):
                 "--pretrained_model_name_or_path", input_model_name,
                 # "--pretrained_vae_name_or_path=stabilityai/sd-vae-ft-mse",
                 # "--resolution=512",
-                "--train_batch_size", str(self.train_batch_size),
                 "--train_text_encoder",
                 "--sample_batch_size=1",
                 "--gradient_accumulation_steps=1",
                 "--gradient_checkpointing",
                 "--use_8bit_adam",
-                "--lr_scheduler", self.lr_scheduler,
                 "--lr_warmup_steps=0",
-                "--mixed_precision=fp16",
-                "--max_train_steps", str(max_train_steps)]
-
-        if self.class_prompt is not None:
-            args.extend(["--class_prompt", self.class_prompt])
-            args.extend(["--class_data_dir", self.class_dir])
-            args.append("--with_prior_preservation")
-            args.append("--prior_loss_weight=1.0")
+                "--mixed_precision=bf16"]
 
         if "inpainting" in self.input_model_name:
             args.append("--not_cache_latents")
         else:
             # args.extend(["--save_sample_prompt", self.instance_prompt])
             pass
-
 
         print(f"run_one:")
         print(f"     output_dir: {output_dir}")
@@ -112,30 +113,32 @@ class Config(argparse.Namespace):
         print(f"           args: {args_to_quoted_str(args)}")
 
         if not self.dry_run:
+            txt_filename = f"{output_dir}/train-cmdline.txt"
+            print(f"** write {txt_filename}")
+            with open(txt_filename, "w") as output:
+                output.write(f"{dreambooth_py}:\n")
+                output.write(f"# {args_to_quoted_str(args)}\n")
+                output.write(f"\n")
+                output.write(f"train.py:\n")
+                output.write(f"# {args_to_quoted_str(sys.argv[1:])}\n")
+
             res = subprocess.run(args, stdout=sys.stdout, stderr=sys.stderr, check=True)
             print(res.stdout)
 
             src = [f"{output_dir}/{filename}" for filename in os.listdir(output_dir) if filename != "logs" and not filename.startswith("checkpoint-")]
             dest = f"{output_dir}/checkpoint-{self.max_train_steps}"
-            if len(src) > 0:
+            if len(src) > 0 and not os.path.exists(dest):
                 print(f"run_one: move [{' '.join(src)}] to {dest}")
                 os.makedirs(dest, exist_ok=True)
                 args = ["mv", *src, dest]
-                res = subprocess.run(args, check=True)
+                res = subprocess.run(args)
 
-            # write the config we're using for this
+            # copy the config to all the checkpoint directories
             for steps in range(self.save_min_steps, max_train_steps+1, self.save_interval):
                 dirname = f"{output_dir}/checkpoint-{steps}"
-
-                filename = f"{dirname}/train-cmdline.txt"
-                # os.makedirs(dirname, exist_ok=True)
-                with open(filename, "w") as output:
-                    output.write(f"{dreambooth_py}:\n")
-                    output.write(f"# {args_to_quoted_str(args)}\n")
-                    output.write(f"\n")
-                    output.write(f"train.py:\n")
-                    output.write(f"# {args_to_quoted_str(sys.argv[1:])}\n")
-
+                args = ["cp", txt_filename, dirname]
+                print(f"** write {dirname}/train-cmdline.txt")
+                res = subprocess.run(args)
 
         if prior_steps != 0:
             for steps in range(self.save_interval, max_train_steps+1, self.save_interval):
