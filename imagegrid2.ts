@@ -1,7 +1,7 @@
 import { GImage, GImageSet, FIELDS, sort, createElement, Visibility } from "./types.js"
 import { loadImageSets } from "./build.js"
 import { StoredVal } from "./storage.js"
-import { GImageGrid } from "./grid.js"
+import { GImageGrid, STORE_HIDDEN } from "./grid.js"
 import { GridHeaders } from "./grid_headers.js"
 
 var grid: GImageGrid
@@ -31,20 +31,18 @@ function onclickChoice(field: string, choice: any, vis: Visibility = "toggle"): 
         }
     }
 
-    // update the css which corresponds to this value
-    var cssRuleIndex = -1
-    for (var idx = 0; idx < document.styleSheets[0].cssRules.length; idx ++) {
-        const cssRule = document.styleSheets[0].cssRules[idx] as CSSStyleRule
-        if (cssRule.selectorText as string == `.${className}`) {
-            cssRuleIndex = idx
-            break
+    // update the css class which corresponds to this value
+    const contents = visibility == "hide" ? "none" : ""
+    for (const rule of document.styleSheets[0].cssRules) {
+        if (rule instanceof CSSStyleRule && rule.selectorText == `.${className}`) {
+            if (visibility == "hide") {
+                rule.style.display = "none"
+            }
+            else {
+                rule.style.removeProperty('display')
+            }
         }
     }
-    const cssContents = (visibility == "hide") ? "display: none" : ""
-    if (cssRuleIndex != -1) {
-        document.styleSheets[0].deleteRule(cssRuleIndex)
-    }
-    document.styleSheets[0].insertRule(`.${className} { ${cssContents} }`)
 
     // if toggling a modelName, also toggle the modelStr's that are subsets of it.
     if (field == 'modelName' || field == 'modelSeed' || field == 'modelSteps') {
@@ -249,7 +247,10 @@ function renderImageSet(iset: GImageSet) {
         return `${field}_${valIndex}`
     }).join(" ")
 
-    const className = `image ${classes}`
+    // 'image' class at the end has visible display. if no other classes before it 
+    // are "display: none", then the display property will fall to the end and show
+    // it.
+    const className = `${classes} image`
     for (const [imageIdx, image] of iset.images.entries()) {
         const column = imageIdx + FIELDS.length + 1
         
@@ -324,14 +325,17 @@ async function loadImages() {
 
 loadImages().then((val) => {
     console.log("loaded images.")
-
-    grid.loadVisibilityFromStore()
+    const store = STORE_HIDDEN.get()
     for (const field of FIELDS) {
-        for (var idx = 0; idx < grid.fieldValueIndex.size; idx ++) {
-            const className = `${field}_${idx}`
-            document.styleSheets[0].insertRule(`.${className} { }`)
+        for (const [value, valueIdx] of grid.fieldValueIndex.get(field)!.entries()) {
+            const className = `${field}_${valueIdx}`
+            const storageKey = `${field}/${value}`
+            const contents = store.has(storageKey) ? "display: none" : ""
+            document.styleSheets[0].insertRule(`.${className} { ${contents} }`)
         }
     }
+
+    grid.loadVisibilityFromStore()
 
     console.log("renderAllChoices")
     renderAllChoices()

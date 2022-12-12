@@ -11,16 +11,16 @@
   width: max-content;
 }
 
+#imagegrid .image {
+  /* display falls to default */
+  width: auto
+}
+
 #imagegrid .image img.thumbnail {
   width: 128px;
   height: 128px;
   margin: 2px;
 }
-
-/* #imagegrid .image:hover img.thumbnail {
-  visibility: hidden;
-  position: absolute;
-} */
 
 #imagegrid span.image span.image_select {
   display: none;
