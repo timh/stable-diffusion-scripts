@@ -7,10 +7,10 @@ const STORE_HIDDEN = new StoredVal('hidden', new Set<String>(),
 class GImageGrid {
     imagesetByFilename: Map<string, GImageSet>
     imageByFilename: Map<string, GImage>
-    imageSets: Map<string, GImageSet>                 // image sets by key
-    imageSetKeys: Array<string>                       // sorted
-    fieldUniqueValues: Map<string, Array<Object>>     // unique sorted values for each field
-    fieldValueIndex: Map<String, Map<Object, number>> // index in this.fieldUniqueValues for each field, value
+    imageSets: Map<string, GImageSet>                          // image sets by key
+    imageSetKeys: Array<string>                                // sorted
+    fieldUniqueValues: Map<string, Array<number | string>>     // unique sorted values for each field
+    fieldValueIndex: Map<String, Map<number | string, number>> // index in this.fieldUniqueValues for each field, value
 
     constructor(imageSets: Map<string, GImageSet>) {
         this.update(imageSets)
@@ -53,7 +53,7 @@ class GImageGrid {
             this.fieldUniqueValues.set(field, sort(val))
         }
 
-        this.fieldValueIndex = new Map<string, Map<Object, number>>()
+        this.fieldValueIndex = new Map()
         for (const field of FIELDS) {
             var valueMap = new Map<any, number>()
             this.fieldValueIndex.set(field, valueMap)
@@ -73,9 +73,29 @@ class GImageGrid {
         return res
     }
 
-    isHidden(field: String, value: any): boolean {
-        var key = `${field}/${value}`
-        return STORE_HIDDEN.get().has(key)
+    isHiddenIset(iset: GImageSet): boolean {
+        const map = new Map<string, number | string>()
+        for (const field of FIELDS) {
+            map.set(field, iset[field])
+        }
+        return this.isHiddenMap(map)
+    }
+
+    isHiddenMap(map: Map<string, number | string>): boolean {
+        const store = STORE_HIDDEN.get()
+        for (const field of map.keys()) {
+            const value = map.get(field)
+            const storeKey = `${field}/${value}`
+            if (store.has(storeKey)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    isHiddenOne(field: string, value: number | string): boolean {
+        const storeKey = `${field}/${value}`
+        return STORE_HIDDEN.get().has(storeKey)
     }
 
     setVisibility(field: string, value: any, visibility: Visibility): Visibility {
@@ -99,10 +119,6 @@ class GImageGrid {
         }
         else {
             newHidden = !curHidden
-        }
-
-        for (const iset of this.isetsForValue(field, value)) {
-            iset.visible = !newHidden
         }
 
         if (newHidden) {

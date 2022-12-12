@@ -29,7 +29,6 @@ class GImageSet {
 
     images: Array<GImage> = []
 
-    visible: boolean = true
     rendered: boolean = false
     setIdx: number
 
@@ -79,10 +78,10 @@ class GImageSet {
     }
 }
 
-function sort(objects): Object[] {
+function sort(objects): any[] {
     // javascript sort behavior is ascii, even when used against numbers. use 
     // number-appropriate sort here.
-    objects = Array.from(objects) as Object[]
+    objects = Array.from(objects) as any[]
     var isNumber = false
     if (objects.length > 0) {
         isNumber = (typeof objects[0] == 'number')

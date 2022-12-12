@@ -5,7 +5,6 @@ class GridHeader {
     rowStart: number = 1
     rowEnd: number = 1
     values: Map<string, string | number>
-    visible: boolean = true
 
     constructor(values: Map<string, string | number>, row: number) {
         this.values = values
@@ -41,6 +40,10 @@ class GridHeaders {
                 if (!madeNewHeader && (curHeader == null || curValue != lastValue)) {
                     const row = curHeader != null ? curHeader.rowEnd : 2
                     curHeader = new GridHeader(new Map(), row)
+                    for (var copyIdx = 0; copyIdx < idx; copyIdx ++) {
+                        const copyField = FIELDS[copyIdx]
+                        curHeader.values.set(copyField, iset[copyField])
+                    }
                     headers.push(curHeader)
                     madeNewHeader = true
                 }
@@ -53,21 +56,6 @@ class GridHeaders {
 
         this.headers = headers
         return this.headers
-    }
-
-    loadVisibilityFromStore() {
-        var hidden = STORE_HIDDEN.get()
-        for (const hiddenStr of hidden) {
-            var [field, value] = hiddenStr.split("/") as [string, any]
-            if (["modelSteps", "modelSeed", "cfg"].indexOf(field) != -1) {
-                value = parseInt(value)
-            }
-            for (const header of this.headers) {
-                if (header.values.get(field) == value) {
-                    header.visible = false
-                }
-            }
-        }
     }
 }
 

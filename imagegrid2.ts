@@ -17,14 +17,6 @@ function onclickChoice(field: string, choice: any, vis: Visibility = "toggle"): 
         }
     }
 
-    // update header visibility for all appropriate headers
-    for (const header of gridHeaders.headers) {
-        if (header.values.get(field) != choice) {
-            continue
-        }
-        header.visible = (visibility == "show")
-    }
-
     const index = grid.fieldValueIndex.get(field)?.get(choice)
     const className = `${field}_${index}`
 
@@ -39,15 +31,20 @@ function onclickChoice(field: string, choice: any, vis: Visibility = "toggle"): 
         }
     }
 
-    // update image span visibility
-    for (const el of document.getElementsByClassName(className)) {
-        if (visibility == "hide") {
-            el.className = el.className + " hidden"
-        }
-        else {
-            el.className = el.className.replace(" hidden", "")
+    // update the css which corresponds to this value
+    var cssRuleIndex = -1
+    for (var idx = 0; idx < document.styleSheets[0].cssRules.length; idx ++) {
+        const cssRule = document.styleSheets[0].cssRules[idx] as CSSStyleRule
+        if (cssRule.selectorText as string == `.${className}`) {
+            cssRuleIndex = idx
+            break
         }
     }
+    const cssContents = (visibility == "hide") ? "display: none" : ""
+    if (cssRuleIndex != -1) {
+        document.styleSheets[0].deleteRule(cssRuleIndex)
+    }
+    document.styleSheets[0].insertRule(`.${className} { ${cssContents} }`)
 
     // if toggling a modelName, also toggle the modelStr's that are subsets of it.
     if (field == 'modelName' || field == 'modelSeed' || field == 'modelSteps') {
@@ -96,7 +93,7 @@ function renderChoices(field: string) {
     for (const [idx, choice] of choices.entries()) {
         const id = `choice_${field}_${idx}`
         const choiceSpan = createElement('span', {'class': "value", 'id': id}, choice.toString())
-        if (grid.isHidden(field, choice)) {
+        if (grid.isHiddenOne(field, choice)) {
             choiceSpan.className += " deselected"
         }
 
@@ -195,7 +192,7 @@ function renderGridHeaders() {
     }
 
     for (const header of gridHeaders.headers) {
-        if (!header.visible) {
+        if (grid.isHiddenMap(header.values)) {
             continue
         }
 
@@ -292,10 +289,9 @@ function renderImageSet(iset: GImageSet) {
 }
 
 function renderGridImages() {
-
     for (const [isetIdx, setKey] of grid.imageSetKeys.entries()) {
         const iset = grid.imageSets.get(setKey) as GImageSet
-        if (iset.rendered || !iset.visible) {
+        if (iset.rendered || grid.isHiddenIset(iset)) {
             continue
         }
         renderImageSet(iset)
@@ -330,7 +326,12 @@ loadImages().then((val) => {
     console.log("loaded images.")
 
     grid.loadVisibilityFromStore()
-    gridHeaders.loadVisibilityFromStore()
+    for (const field of FIELDS) {
+        for (var idx = 0; idx < grid.fieldValueIndex.size; idx ++) {
+            const className = `${field}_${idx}`
+            document.styleSheets[0].insertRule(`.${className} { }`)
+        }
+    }
 
     console.log("renderAllChoices")
     renderAllChoices()

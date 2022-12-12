@@ -52,6 +52,9 @@ function loadImageSets(filenames: string[]): Map<string, GImageSet> {
             modelName = modelName.replace("-bf16", " bf16")
             modelName = modelName.replace("-f222", " f222")
             modelName = modelName.replace("-f222v", " f222v")
+            modelName = modelName.replace("-warmup", " warmup")
+            modelName = modelName.replace("_r0", "") // temp
+            modelName = modelName.replace("@", " @")
 
             var iset = new GImageSet(modelName, modelSeed, modelSteps, prompt, sampler, samplerSteps, cfg)
             const isetKey = iset.getKey(FIELDS)

@@ -142,15 +142,7 @@ async function loadImages() {
 
         console.log(`started with ${Array.from(grid.imageByFilename.keys()).length} filenames`)
         for (const iset of grid.imageSets.values()) {
-            var skip = false
-            for (const field of FIELDS) {
-                const value = iset[field]
-                if (grid.isHidden(field, value)) {
-                    skip = true
-                    break
-                }
-            }
-            if (skip) {
+            if (grid.isHiddenIset(iset)) {
                 continue
             }
             for (const img of iset.images) {
