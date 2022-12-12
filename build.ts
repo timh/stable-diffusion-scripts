@@ -54,7 +54,7 @@ function loadImageSets(filenames: string[]): Map<string, GImageSet> {
             modelName = modelName.replace("-f222v", " f222v")
 
             var iset = new GImageSet(modelName, modelSeed, modelSteps, prompt, sampler, samplerSteps, cfg)
-            var isetKey = iset.getKey(FIELDS)
+            const isetKey = iset.getKey(FIELDS)
             if (imageSets.has(isetKey)) {
                 iset = imageSets.get(isetKey) as GImageSet
             }

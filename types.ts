@@ -29,7 +29,11 @@ class GImageSet {
 
     images: Array<GImage> = []
 
-    constructor(modelName = "", modelSeed = 0, modelSteps = 0, prompt = "", sampler = "", samplerSteps = 0, cfg = 0) {
+    visible: boolean = true
+    rendered: boolean = false
+    setIdx: number
+
+    constructor(modelName = "", modelSeed = 0, modelSteps = 0, prompt = "", sampler = "", samplerSteps = 0, cfg = 0, setIdx = 0) {
         this.modelName = modelName
         this.modelSeed = modelSeed
         this.modelSteps = modelSteps
@@ -37,7 +41,8 @@ class GImageSet {
         this.sampler = sampler
         this.samplerSteps = samplerSteps
         this.cfg = cfg
-
+        this.setIdx = setIdx
+    
         if (this.modelSteps) {
             this.modelStr = `${this.modelName} r${this.modelSeed} ${this.modelSteps.toString().padStart(5, " ")}`
         }
@@ -52,8 +57,7 @@ class GImageSet {
         var useFields = new Array<string>()
         for (const field of fields) {
             // don't include modelStr in the key; it's included via its component parts, and 
-            // it's not sorted correctly due to numeric steps being treated as non zero-padded
-            // strings.
+            // it's not sorted correctly due to numeric steps being sorted by alpha
             if (field != 'modelStr') {
                 useFields.push(field)
             }
@@ -72,22 +76,6 @@ class GImageSet {
             res += (key + "=" + val)
         })
         return res
-    }
-}
-
-class ColumnHeader {
-    row: number = 1
-    columnStart: number
-    columnEnd: number
-    field: string = ""
-    value: string = ""
-    classes: string = ""
-
-    constructor(row: number, field: string, value: string, column: number = 1) {
-        this.row = row
-        this.columnStart = this.columnEnd = column
-        this.field = field
-        this.value = value
     }
 }
 
@@ -121,4 +109,4 @@ function createElement(type: string, props = {}, withText = ""): HTMLElement {
     return elem
 }
 
-export { GImage, GImageSet, ColumnHeader, Visibility, FIELDS, sort, createElement }
+export { GImage, GImageSet, Visibility, FIELDS, sort, createElement }

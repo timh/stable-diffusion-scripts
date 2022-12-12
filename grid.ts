@@ -1,4 +1,4 @@
-import { GImage, GImageSet, ColumnHeader, Visibility, FIELDS, sort } from "./types.js"
+import { GImage, GImageSet, Visibility, FIELDS, sort } from "./types.js"
 import { StoredVal } from "./storage.js"
 
 const STORE_HIDDEN = new StoredVal('hidden', new Set<String>(), 
@@ -12,7 +12,6 @@ class GImageGrid {
     fieldUniqueValues: Map<string, Array<Object>>     // unique sorted values for each field
     fieldValueIndex: Map<String, Map<Object, number>> // index in this.fieldUniqueValues for each field, value
 
-
     constructor(imageSets: Map<string, GImageSet>) {
         this.update(imageSets)
     }
@@ -22,11 +21,19 @@ class GImageGrid {
         this.imageSetKeys = sort(imageSets.keys()) as string[]
         this.imagesetByFilename = new Map()
         this.imageByFilename = new Map()
+
+        // set up helper maps
         for (const iset of imageSets.values()) {
             for (const img of iset.images) {
                 this.imagesetByFilename.set(img.filename, iset)
                 this.imageByFilename.set(img.filename, img)
             }
+        }
+
+        // set index values of each image set
+        for (const [idx, isetKey] of this.imageSetKeys.entries()) {
+            const iset = this.imageSets.get(isetKey)!
+            iset.setIdx = idx
         }
 
         // build sorted list of unique values for each field. start by building a set.
@@ -56,6 +63,16 @@ class GImageGrid {
         }
     }
 
+    isetsForValue(field: string, value: any): Array<GImageSet> {
+        const res = new Array<GImageSet>()
+        for (const iset of this.imageSets.values()) {
+            if (iset[field] == value) {
+                res.push(iset)
+            }
+        }
+        return res
+    }
+
     isHidden(field: String, value: any): boolean {
         var key = `${field}/${value}`
         return STORE_HIDDEN.get().has(key)
@@ -70,53 +87,33 @@ class GImageGrid {
             // console.log(`can't find index for ${field} ${value}`)
             return "toggle"
         }
-    
-        var className = `${field}_${index}`
-        var spanId = `choice_${className}`
-        var span = document.getElementById(spanId)
-        if (span != null) {
-            var curHidden = this.isHidden(field, value)
-            var newHidden: boolean
-    
-            if (visibility == "hide") {
-                newHidden = true
-            }
-            else if (visibility == "show") {
-                newHidden = false
-            }
-            else {
-                newHidden = !curHidden
-            }
 
-            if (newHidden) {
-                span.className = span.className + " deselected"
-            }
-            else {
-                span.className = span.className.replace(" deselected", "")
-            }
-    
-            for (const el of document.getElementsByClassName(className)) {
-                if (newHidden) {
-                    el.className = el.className + " hidden"
-                }
-                else {
-                    el.className = el.className.replace(" hidden", "")
-                }
-            }
-    
-            const storageId = `${field}/${value}`
-            if (newHidden) {
-                STORE_HIDDEN.get().add(storageId)
-            }
-            else {
-                STORE_HIDDEN.get().delete(storageId)
-            }
-            STORE_HIDDEN.save()
-    
-            return newHidden ? "hide" : "show"
+        const storageId = `${field}/${value}`
+        const curHidden = STORE_HIDDEN.get().has(storageId)
+        var newHidden: boolean
+        if (visibility == "hide") {
+            newHidden = true
         }
-        console.log(`can't find span ${spanId}`)
-        return "toggle"
+        else if (visibility == "show") {
+            newHidden = false
+        }
+        else {
+            newHidden = !curHidden
+        }
+
+        for (const iset of this.isetsForValue(field, value)) {
+            iset.visible = !newHidden
+        }
+
+        if (newHidden) {
+            STORE_HIDDEN.get().add(storageId)
+        }
+        else {
+            STORE_HIDDEN.get().delete(storageId)
+        }
+        STORE_HIDDEN.save()
+
+        return newHidden ? "hide" : "show"
     }
     
     loadVisibilityFromStore() {
@@ -132,4 +129,4 @@ class GImageGrid {
 }
 
 
-export { GImageGrid }
+export { GImageGrid, STORE_HIDDEN }

@@ -1,4 +1,4 @@
-import { GImage, GImageSet, ColumnHeader, FIELDS, sort, createElement } from "./types.js"
+import { GImage, GImageSet, FIELDS, sort, createElement, Visibility } from "./types.js"
 import { loadImageSets } from "./build.js"
 import { StoredVal } from "./storage.js"
 import { GImageGrid } from "./grid.js"
@@ -7,13 +7,52 @@ import { GridHeaders } from "./grid_headers.js"
 var grid: GImageGrid
 var gridHeaders: GridHeaders
 
-function onclickChoice(field: string, choice: any): any {
-    var visibility = grid.setVisibility(field, choice, "toggle")
+function onclickChoice(field: string, choice: any, vis: Visibility = "toggle"): any {
+    const visibility = grid.setVisibility(field, choice, vis)
+    const isetsForValue = grid.isetsForValue(field, choice)
+
+    for (const iset of isetsForValue) {
+        if (visibility == "show" && !iset.rendered) {
+            renderImageSet(iset)
+        }
+    }
+
+    // update header visibility for all appropriate headers
+    for (const header of gridHeaders.headers) {
+        if (header.values.get(field) != choice) {
+            continue
+        }
+        header.visible = (visibility == "show")
+    }
+
+    const index = grid.fieldValueIndex.get(field)?.get(choice)
+    const className = `${field}_${index}`
+
+    // update the choice button itself.
+    const choiceSpan = document.getElementById(`choice_${className}`)
+    if (choiceSpan != null) {
+        if (visibility == "hide") {
+            choiceSpan.className = choiceSpan.className + " deselected"
+        }
+        else {
+            choiceSpan.className = choiceSpan.className.replace(" deselected", "")
+        }
+    }
+
+    // update image span visibility
+    for (const el of document.getElementsByClassName(className)) {
+        if (visibility == "hide") {
+            el.className = el.className + " hidden"
+        }
+        else {
+            el.className = el.className.replace(" hidden", "")
+        }
+    }
 
     // if toggling a modelName, also toggle the modelStr's that are subsets of it.
     if (field == 'modelName' || field == 'modelSeed' || field == 'modelSteps') {
-        var candidates = grid.fieldUniqueValues.get('modelStr') as Array<string>
-        for (const candidate of candidates) {
+        const candidates = grid.fieldUniqueValues.get('modelStr') as Array<string>
+        for (const [candIdx, candidate] of candidates.entries()) {
             if (field == 'modelName' && candidate.startsWith(choice.toString())) {
                 // modelStr that starts with this modelName should be matched.
             }
@@ -28,10 +67,10 @@ function onclickChoice(field: string, choice: any): any {
                 continue;
             }
 
-            grid.setVisibility('modelStr', candidate, visibility)
+            onclickChoice('modelStr', candidate, visibility)
         }
     }
-    // renderAllChoices()
+    renderGridHeaders()
 }
 
 function renderAllChoices() {
@@ -42,8 +81,8 @@ function renderAllChoices() {
 }
 
 function renderChoices(field: string) {
-    var choices = grid.fieldUniqueValues.get(field)!
-    var chooserDiv = document.getElementById('chooser')!
+    const choices = grid.fieldUniqueValues.get(field)!
+    const chooserDiv = document.getElementById('chooser')!
 
     var span = document.createElement("span")
     span.className = "field"
@@ -55,8 +94,11 @@ function renderChoices(field: string) {
     chooserDiv.appendChild(span)
 
     for (const [idx, choice] of choices.entries()) {
-        var id = `choice_${field}_${idx}`
-        var choiceSpan = createElement('span', {'class': "value", 'id': id}, choice.toString())
+        const id = `choice_${field}_${idx}`
+        const choiceSpan = createElement('span', {'class': "value", 'id': id}, choice.toString())
+        if (grid.isHidden(field, choice)) {
+            choiceSpan.className += " deselected"
+        }
 
         choiceSpan.onclick = function(this: GlobalEventHandlers, ev: MouseEvent): any {
             onclickChoice(field, choice)
@@ -144,82 +186,119 @@ function renderCheckStats() {
 }
 
 function renderGridHeaders() {
-    var gridElem = document.getElementById("imagegrid") as HTMLElement
-    gridElem.innerHTML = ""
-    gridHeaders.headers.forEach((header) => {
-        var span = createElement('span', {'class': `header ${header.classes}`})
-        span.style.gridRow = header.row.toString()
-        span.style.gridColumnStart = header.columnStart.toString()
-        span.style.gridColumnEnd = header.columnEnd.toString()
-        span.textContent = header.value
+    const gridElem = document.getElementById("imagegrid") as HTMLElement
+
+    // clear any existing headers.
+    const headerElems = Array.from(gridElem.getElementsByClassName("header"))
+    for (const headerElem of headerElems) {
+        gridElem.removeChild(headerElem)
+    }
+
+    for (const header of gridHeaders.headers) {
+        if (!header.visible) {
+            continue
+        }
+
+        const span = createElement('span', {'class': "header"})
+        span.style.gridColumnStart = "1"
+        span.style.gridColumnEnd = "3"
+        span.style.gridRowStart = header.rowStart.toString()
+        span.style.gridRowEnd = header.rowEnd.toString()
+
+        var text = ""
+        for (const field of FIELDS) {
+            if (field == "modelStr") {
+                continue
+            }
+            const value = header.values.get(field as string)
+            if (value != undefined) {
+                text += `${value}<br/>\n`
+            }
+        }
+        span.innerHTML = text
         gridElem.appendChild(span)
-    })
+    }
+}
+
+function renderSeedHeaders() {
+    const gridElem = document.getElementById("imagegrid") as HTMLElement
 
     // generate row labels for all the seeds
-    var allSeedsSet = new Set<number>()
+    const allSeedsSet = new Set<number>()
     for (const iset of grid.imageSets.values()) {
         for (const img of iset.images) {
             allSeedsSet.add(img.seed)
         }
     }
-    var allSeeds = sort(allSeedsSet)
+    const allSeeds = sort(allSeedsSet)
     for (const [idx, seed] of allSeeds.entries()) {
-        var span = createElement('span', {}, seed.toString())
-        const row = (idx + FIELDS.length + 1)
-        span.style.gridRow = row.toString()
-        span.style.gridColumn = "1"
+        const span = createElement('span', {}, seed.toString())
+        const column = (idx + FIELDS.length + 1)
+        span.style.gridRow = "1"
+        span.style.gridColumn = column.toString()
         gridElem.appendChild(span)
     }        
 }
 
+function renderImageSet(iset: GImageSet) {
+    iset.rendered = true
+
+    const gridElem = document.getElementById("imagegrid") as HTMLElement
+
+    const row = iset.setIdx + 2
+    const classes = FIELDS.map((field) => {
+        const val = iset[field]
+        const valIndex = grid.fieldValueIndex.get(field)?.get(val)
+        return `${field}_${valIndex}`
+    }).join(" ")
+
+    const className = `image ${classes}`
+    for (const [imageIdx, image] of iset.images.entries()) {
+        const column = imageIdx + FIELDS.length + 1
+        
+        const imageSpan = createElement('span', {'class': className})
+        imageSpan.style.gridRow = row.toString()
+        imageSpan.style.gridColumn = column.toString()
+
+        const selectElem = imageSpan.appendChild(createElement('span', {'class': "image_select"}, "checked"))
+        if (image.checked) {
+            selectElem.className += " checked"
+        }
+
+        const thumbElem = imageSpan.appendChild(createElement('img', {'src': image.filename, 'class': "thumbnail"}))
+        thumbElem.onclick = function(this, ev) {
+            onclickThumbnail(ev, image.filename)
+        }
+
+        const detailsSpan = imageSpan.appendChild(createElement('span', {'class': "details"}))
+        const fullsizeElem = detailsSpan.appendChild(createElement('img', {'src': image.filename, 'class': "fullsize"}))
+        const detailsGrid = detailsSpan.appendChild(createElement('div', {'class': "details_grid"}))
+
+        const entries = {"model": iset.modelStr, "prompt": iset.prompt, 
+                            "sampler": `${iset.sampler} ${iset.samplerSteps}`,
+                            "CFG": iset.cfg.toString(), "seed": image.seed.toString()}
+        for (const key in entries) {
+            const value = entries[key]
+            const keySpan = createElement('span', {'class': "detailsKey"})
+            keySpan.textContent = key
+            const valueSpan = createElement('span', {'class': "detailsVal"})
+            valueSpan.textContent = value
+            detailsGrid.appendChild(keySpan)
+            detailsGrid.appendChild(valueSpan)
+        }
+
+        gridElem.appendChild(imageSpan)
+    }
+}
+
 function renderGridImages() {
-    var gridElem = document.getElementById("imagegrid") as HTMLElement
 
     for (const [isetIdx, setKey] of grid.imageSetKeys.entries()) {
-        var iset = grid.imageSets.get(setKey) as GImageSet
-        var column = isetIdx + 2
-        var classes = FIELDS.map((field) => {
-            var val = iset[field]
-            return `${field}_${grid.fieldValueIndex.get(field)?.get(val)}`
-        }).join(" ")
-
-        const className = `image ${classes}`
-        for (const [imageIdx, image] of iset.images.entries()) {
-            const row = imageIdx + FIELDS.length + 1
-            
-            var imageSpan = createElement('span', {'class': className})
-            imageSpan.style.gridRow = row.toString()
-            imageSpan.style.gridColumn = column.toString()
-    
-            var selectElem = imageSpan.appendChild(createElement('span', {'class': "image_select"}, "checked"))
-            if (image.checked) {
-                selectElem.className += " checked"
-            }
-
-            var thumbElem = imageSpan.appendChild(createElement('img', {'src': image.filename, 'class': "thumbnail"}))
-            thumbElem.onclick = function(this, ev) {
-                onclickThumbnail(ev, image.filename)
-            }
-
-            var detailsSpan = imageSpan.appendChild(createElement('span', {'class': "details"}))
-            var fullsizeElem = detailsSpan.appendChild(createElement('img', {'src': image.filename, 'class': "fullsize"}))
-            var detailsGrid = detailsSpan.appendChild(createElement('div', {'class': "details_grid"}))
-
-            var entries = {"model": iset.modelStr, "prompt": iset.prompt, 
-                           "sampler": `${iset.sampler} ${iset.samplerSteps}`,
-                           "CFG": iset.cfg.toString(), "seed": image.seed.toString()}
-            for (const key in entries) {
-                const value = entries[key]
-                var keySpan = createElement('span', {'class': "detailsKey"})
-                keySpan.textContent = key
-                var valueSpan = createElement('span', {'class': "detailsVal"})
-                valueSpan.textContent = value
-                detailsGrid.appendChild(keySpan)
-                detailsGrid.appendChild(valueSpan)
-            }
-
-            gridElem.appendChild(imageSpan)
+        const iset = grid.imageSets.get(setKey) as GImageSet
+        if (iset.rendered || !iset.visible) {
+            continue
         }
+        renderImageSet(iset)
     }
 }
 
@@ -250,15 +329,21 @@ async function loadImages() {
 loadImages().then((val) => {
     console.log("loaded images.")
 
+    grid.loadVisibilityFromStore()
+    gridHeaders.loadVisibilityFromStore()
+
     console.log("renderAllChoices")
     renderAllChoices()
+
     console.log("renderCheckStats")
     renderCheckStats()
 
     console.log("renderGridHeaders")
     renderGridHeaders()
-    console.log("renderGridImages")
-    renderGridImages()
 
-    grid.loadVisibilityFromStore()
+    console.log("renderSeedHeaders")
+    renderSeedHeaders()
+
+    console.log("renderSeedImages")
+    renderGridImages()
 })
