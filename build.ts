@@ -10,6 +10,9 @@ function loadImageSets(filenames: string[]): Map<string, GImageSet> {
     // alex44-everydream-e01_00440
     // output_alex22_768-sd21@4.0_3300
     const RE_MODEL_EVERYDREAM = /^([\w\d@_\-\+\.]+)_(\d+)$/
+
+    const RE_MODEL_BATCH = /^(.+)-batch(\d+)(.*)$/
+    const RE_MODEL_LR = /^(.+)@([\d\.]+)(.*)$/
     
     var imageSets = new Map<string, GImageSet>()
     for (const filename of filenames) {
@@ -33,6 +36,8 @@ function loadImageSets(filenames: string[]): Map<string, GImageSet> {
             var modelName = modelStr
             var modelSeed = 0
             var modelSteps = 0
+            var modelBatch = 1
+            var modelLR = "1.0"
             match = RE_MODEL.exec(modelStr)
             if (match) {
                 modelName = match[1]
@@ -47,6 +52,18 @@ function loadImageSets(filenames: string[]): Map<string, GImageSet> {
                 }
             }
 
+            match = RE_MODEL_BATCH.exec(modelName)
+            if (match) {
+                modelBatch = parseInt(match[2])
+                modelName = match[1] + match[3]
+            }
+
+            match = RE_MODEL_LR.exec(modelName)
+            if (match) {
+                modelLR = match[2]
+                modelName = match[1] + match[3]
+            }
+
             modelName = modelName.replace("-batch", " batch")
             modelName = modelName.replace("-cap", " cap")
             modelName = modelName.replace("-bf16", " bf16")
@@ -56,7 +73,11 @@ function loadImageSets(filenames: string[]): Map<string, GImageSet> {
             modelName = modelName.replace("_r0", "") // temp
             modelName = modelName.replace("@", " @")
 
-            var iset = new GImageSet(modelName, modelSeed, modelSteps, prompt, sampler, samplerSteps, cfg)
+            var iset = new GImageSet({modelName: modelName, modelSeed: modelSeed, modelSteps: modelSteps, 
+                                      modelBatch: modelBatch, modelLR: modelLR,
+                                      prompt: prompt, 
+                                      sampler: sampler, samplerSteps: samplerSteps, cfg: cfg})
+            // var iset = new GImageSet(modelName, modelSeed, modelSteps, prompt, sampler, samplerSteps, cfg)
             const isetKey = iset.getKey(FIELDS)
             if (imageSets.has(isetKey)) {
                 iset = imageSets.get(isetKey) as GImageSet

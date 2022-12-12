@@ -1,4 +1,4 @@
-import { GImage, GImageSet, FIELDS, sort, createElement, Visibility } from "./types.js"
+import { GImage, GImageSet, FIELDS, FIELDS_SHORT, sort, createElement, Visibility } from "./types.js"
 import { loadImageSets } from "./build.js"
 import { StoredVal } from "./storage.js"
 import { GImageGrid, STORE_HIDDEN } from "./grid.js"
@@ -207,6 +207,10 @@ function renderGridHeaders() {
             }
             const value = header.values.get(field as string)
             if (value != undefined) {
+                const shortLabel = FIELDS_SHORT[field]
+                if (shortLabel != undefined) {
+                    text += `${shortLabel} `
+                }
                 text += `${value}<br/>\n`
             }
         }

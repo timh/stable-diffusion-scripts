@@ -2,7 +2,8 @@ type Visibility = ("toggle" | "hide" | "show")
 
 // const FIELDS = ['prompt', 'modelName', 'cfg', 'modelStr', 'modelSeed', 'modelSteps', 'samplerStr']
 // const FIELDS = ['prompt', 'modelSteps', 'modelStr', 'modelName', 'modelSeed', 'samplerStr', 'cfg']
-const FIELDS = ['prompt', 'modelStr', 'modelName', 'modelSteps', 'modelSeed', 'samplerStr', 'cfg']
+const FIELDS = ['prompt', 'modelStr', 'modelName', 'modelSteps', 'modelLR', 'modelBatch', 'samplerStr', 'cfg']
+const FIELDS_SHORT = {"modelSteps": "steps", "modelBatch": "batch", "modelLR": "LR", "cfg": "cfg"}
 
 class GImage {
     filename: string
@@ -21,6 +22,8 @@ class GImageSet {
     modelName: string
     modelSeed: number
     modelSteps: number
+    modelBatch: number
+    modelLR: string
     prompt: string
     sampler: string
     samplerSteps: number
@@ -32,18 +35,22 @@ class GImageSet {
     rendered: boolean = false
     setIdx: number
 
-    constructor(modelName = "", modelSeed = 0, modelSteps = 0, prompt = "", sampler = "", samplerSteps = 0, cfg = 0, setIdx = 0) {
-        this.modelName = modelName
-        this.modelSeed = modelSeed
-        this.modelSteps = modelSteps
-        this.prompt = prompt
-        this.sampler = sampler
-        this.samplerSteps = samplerSteps
-        this.cfg = cfg
-        this.setIdx = setIdx
+    constructor(args: any) {
+        this.modelName = args.modelName || ""
+        this.modelSeed = args.modelSeed || 0
+        this.modelSteps = args.modelSteps || 0
+        this.modelBatch = args.modelBatch || 1
+        this.modelLR = args.modelLR || "1.0"
+        this.prompt = args.prompt || ""
+        this.sampler = args.sampler || "ddim"
+        this.samplerSteps = args.samplerSteps || 30
+        this.cfg = args.cfg || 7
+        this.setIdx = args.setIdx || 0
     
         if (this.modelSteps) {
-            this.modelStr = `${this.modelName} r${this.modelSeed} ${this.modelSteps.toString().padStart(5, " ")}`
+            const parts = [this.modelName, "r" + this.modelSeed.toString(), this.modelSteps.toString().padStart(5, " "),
+                            "B" + this.modelBatch.toString(), "@" + this.modelLR]
+            this.modelStr = parts.join(" ")
         }
         else {
             this.modelStr = this.modelName
@@ -108,4 +115,4 @@ function createElement(type: string, props = {}, withText = ""): HTMLElement {
     return elem
 }
 
-export { GImage, GImageSet, Visibility, FIELDS, sort, createElement }
+export { GImage, GImageSet, Visibility, FIELDS, FIELDS_SHORT, sort, createElement }
