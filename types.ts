@@ -29,7 +29,11 @@ class GImageSet {
 
     images: Array<GImage> = []
 
-    constructor(modelName = "", modelSeed = 0, modelSteps = 0, prompt = "", sampler = "", samplerSteps = 0, cfg = 0) {
+    visible: boolean = true
+    rendered: boolean = false
+    setIdx: number
+
+    constructor(modelName = "", modelSeed = 0, modelSteps = 0, prompt = "", sampler = "", samplerSteps = 0, cfg = 0, setIdx = 0) {
         this.modelName = modelName
         this.modelSeed = modelSeed
         this.modelSteps = modelSteps
@@ -37,7 +41,8 @@ class GImageSet {
         this.sampler = sampler
         this.samplerSteps = samplerSteps
         this.cfg = cfg
-
+        this.setIdx = setIdx
+    
         if (this.modelSteps) {
             this.modelStr = `${this.modelName} r${this.modelSeed} ${this.modelSteps.toString().padStart(5, " ")}`
         }
