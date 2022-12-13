@@ -1,6 +1,7 @@
 import os, os.path
 import sys
 import argparse
+from pathlib import Path
 import subprocess
 import shlex
 from typing import List
@@ -46,20 +47,23 @@ class Config(argparse.Namespace):
         return max_steps
     
     def run_one(self, seed:int):
-        input_model_name:str = self.input_model_name
-
+        input_model_name = self.input_model_name
         output_dir_base = self._output_dir(seed)
-        prior_steps = self._find_prior_steps_trained(output_dir_base)
-        max_train_steps = self.max_train_steps - prior_steps
         output_dir = output_dir_base
-        if prior_steps != 0:
-            print(f"{output_dir_base}: found existing model with {prior_steps} steps already trained")
-            input_model_name = f"{output_dir_base}/checkpoint-{prior_steps}"
-            output_dir = f"{output_dir_base}+{prior_steps}"
+
+        max_train_steps = 0
+        prior_steps = 0
+        if self.max_train_steps:
+            prior_steps = self._find_prior_steps_trained(output_dir_base)
+            max_train_steps = self.max_train_steps - prior_steps
+            if prior_steps != 0:
+                print(f"{output_dir_base}: found existing model with {prior_steps} steps already trained")
+                input_model_name = f"{output_dir_base}/checkpoint-{prior_steps}"
+                output_dir = f"{output_dir_base}+{prior_steps}"
         
-        if max_train_steps <= 0:
-            print(f"** nothing to do, max_train_steps is {max_train_steps}")
-            return
+            if max_train_steps <= 0:
+                print(f"** nothing to do, max_train_steps is {max_train_steps}")
+                return
 
         class_args: List[str] = []
         if self.class_prompt is not None:
@@ -79,7 +83,6 @@ class Config(argparse.Namespace):
                 "--learning_rate", str(self.learning_rate),
                 "--lr_scheduler", self.lr_scheduler,
                 "--train_batch_size", str(self.train_batch_size),
-                "--max_train_steps", str(max_train_steps),
                 "--save_steps", str(self.save_interval),
                 # "--save_interval", str(self.save_interval),
                 # "--save_min_steps", str(self.save_min_steps),
@@ -97,6 +100,11 @@ class Config(argparse.Namespace):
                 "--lr_warmup_steps=0",
                 "--mixed_precision=bf16"]
 
+        if max_train_steps:
+            args.extend(["--max_train_steps", str(max_train_steps)])
+        if self.num_train_epochs:
+            args.extend(["--num_train_epochs", str(self.num_train_epochs)])
+
         if "inpainting" in self.input_model_name:
             args.append("--not_cache_latents")
         else:
@@ -112,9 +120,11 @@ class Config(argparse.Namespace):
         print(f"   class_prompt: {self.class_prompt}")
         print(f"           args: {args_to_quoted_str(args)}")
 
+
+        txt_filename = Path(output_dir).joinpath("train-cmdline.txt")
         if not self.dry_run:
-            txt_filename = f"{output_dir}/train-cmdline.txt"
-            print(f"** write {txt_filename}")
+            print(f"** write {txt_filename.absolute()}")
+            txt_filename.parent.mkdir(exist_ok=True)
             with open(txt_filename, "w") as output:
                 output.write(f"{dreambooth_py}:\n")
                 output.write(f"# {args_to_quoted_str(args)}\n")
@@ -125,19 +135,12 @@ class Config(argparse.Namespace):
             res = subprocess.run(args, stdout=sys.stdout, stderr=sys.stderr, check=True)
             print(res.stdout)
 
-            src = [f"{output_dir}/{filename}" for filename in os.listdir(output_dir) if filename != "logs" and not filename.startswith("checkpoint-")]
-            dest = f"{output_dir}/checkpoint-{self.max_train_steps}"
-            if len(src) > 0 and not os.path.exists(dest):
-                print(f"run_one: move [{' '.join(src)}] to {dest}")
-                os.makedirs(dest, exist_ok=True)
-                args = ["mv", *src, dest]
-                res = subprocess.run(args)
-
             # copy the config to all the checkpoint directories
-            for steps in range(self.save_min_steps, max_train_steps+1, self.save_interval):
-                dirname = f"{output_dir}/checkpoint-{steps}"
-                args = ["cp", txt_filename, dirname]
-                print(f"** write {dirname}/train-cmdline.txt")
+            for subdir in Path(output_dir).iterdir():
+                if not subdir.is_dir() or not subdir.name.startswith("checkpoint-"):
+                    continue
+                args = ["cp", txt_filename.absolute(), subdir.absolute()]
+                print(f"** write {subdir.absolute()}/train-cmdline.txt")
                 res = subprocess.run(args)
 
         if prior_steps != 0:
@@ -168,7 +171,8 @@ def parse_args() -> Config:
     parser.add_argument("--learning_rate", "--lr", "-l", default="2e-6", help="learning rate")
     parser.add_argument("--lr_scheduler", default="polynomial", help="scheduler type: constant, linear, cosine, polynomial")
     parser.add_argument("--seeds", "-S", default="1", help="random seeds (comma separated for multiple)")
-    parser.add_argument("--steps", "-s", dest='max_train_steps', type=int, required=True, default=2000, help="number of training steps")
+    parser.add_argument("--steps", "-s", dest='max_train_steps', type=int, help="number of training steps")
+    parser.add_argument("--epochs", dest='num_train_epochs', type=int, help="number epochs")
     parser.add_argument("--model", dest='input_model_name', default="runwayml/stable-diffusion-v1-5", help="name or path for base model")
     parser.add_argument("--save_interval", type=int, default=500, help="save every <N> steps")
     parser.add_argument("--save_min_steps", type=int, default=500, help="only save checkpoints at or greater than <N> steps")
