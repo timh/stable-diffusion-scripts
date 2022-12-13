@@ -1,8 +1,7 @@
 type Visibility = ("toggle" | "hide" | "show")
 
-// const FIELDS = ['prompt', 'modelName', 'cfg', 'modelStr', 'modelSeed', 'modelSteps', 'samplerStr']
-// const FIELDS = ['prompt', 'modelSteps', 'modelStr', 'modelName', 'modelSeed', 'samplerStr', 'cfg']
-const FIELDS = ['prompt', 'modelStr', 'modelName', 'modelSteps', 'modelLR', 'modelBatch', 'samplerStr', 'cfg']
+// const FIELDS = ['prompt', 'modelStr', 'modelName', 'modelSteps', 'modelLR', 'modelBatch', 'samplerStr', 'cfg']
+const FIELDS = ['prompt', 'modelSteps', 'modelStr', 'modelName', 'modelLR', 'modelBatch', 'samplerStr', 'cfg']
 const FIELDS_SHORT = {"modelSteps": "steps", "modelBatch": "batch", "modelLR": "LR", "cfg": "cfg"}
 
 class GImage {
@@ -19,6 +18,7 @@ class GImage {
 
 class GImageSet {
     modelStr: string
+    modelNameOrig: string
     modelName: string
     modelSeed: number
     modelSteps: number
@@ -37,6 +37,7 @@ class GImageSet {
 
     constructor(args: any) {
         this.modelName = args.modelName || ""
+        this.modelNameOrig = args.modelNameOrig || args.modelName || ""
         this.modelSeed = args.modelSeed || 0
         this.modelSteps = args.modelSteps || 0
         this.modelBatch = args.modelBatch || 1

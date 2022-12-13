@@ -52,6 +52,7 @@ function loadImageSets(filenames: string[]): Map<string, GImageSet> {
                 }
             }
 
+            const modelNameOrig = modelName
             match = RE_MODEL_BATCH.exec(modelName)
             if (match) {
                 modelBatch = parseInt(match[2])
@@ -65,15 +66,14 @@ function loadImageSets(filenames: string[]): Map<string, GImageSet> {
             }
 
             modelName = modelName.replace("-batch", " batch")
-            modelName = modelName.replace("-cap", " cap")
-            modelName = modelName.replace("-bf16", " bf16")
+            modelName = modelName.replace("-cap", " +cap")
+            modelName = modelName.replace("-bf16", "")
             modelName = modelName.replace("-f222", " f222")
             modelName = modelName.replace("-f222v", " f222v")
             modelName = modelName.replace("-warmup", " warmup")
             modelName = modelName.replace("_r0", "") // temp
-            modelName = modelName.replace("@", " @")
 
-            var iset = new GImageSet({modelName: modelName, modelSeed: modelSeed, modelSteps: modelSteps, 
+            var iset = new GImageSet({modelName: modelName, modelNameOrig: modelNameOrig, modelSeed: modelSeed, modelSteps: modelSteps, 
                                       modelBatch: modelBatch, modelLR: modelLR,
                                       prompt: prompt, 
                                       sampler: sampler, samplerSteps: samplerSteps, cfg: cfg})

@@ -189,6 +189,7 @@ function renderGridHeaders() {
         gridElem.removeChild(headerElem)
     }
 
+    const lastValues = {}
     for (const header of gridHeaders.headers) {
         if (grid.isHiddenMap(header.values)) {
             continue
@@ -206,13 +207,17 @@ function renderGridHeaders() {
                 continue
             }
             const value = header.values.get(field as string)
-            if (value != undefined) {
-                const shortLabel = FIELDS_SHORT[field]
-                if (shortLabel != undefined) {
-                    text += `${shortLabel} `
-                }
-                text += `${value}<br/>\n`
+
+            if (value == undefined || value == lastValues[field]) {
+                continue
             }
+            const shortLabel = FIELDS_SHORT[field]
+            if (shortLabel != undefined) {
+                text += `${shortLabel} `
+            }
+            text += `${value}<br/>\n`
+
+            lastValues[field] = value
         }
         span.innerHTML = text
         gridElem.appendChild(span)
@@ -276,9 +281,13 @@ function renderImageSet(iset: GImageSet) {
         const fullsizeElem = detailsSpan.appendChild(createElement('img', {'src': image.filename, 'class': "fullsize"}))
         const detailsGrid = detailsSpan.appendChild(createElement('div', {'class': "details_grid"}))
 
-        const entries = {"model": iset.modelStr, "prompt": iset.prompt, 
-                            "sampler": `${iset.sampler} ${iset.samplerSteps}`,
-                            "CFG": iset.cfg.toString(), "seed": image.seed.toString()}
+        const entries = {"modelName": iset.modelName,
+                         "modelOrig": iset.modelNameOrig,
+                         "modelStr": iset.modelStr, 
+                         "prompt": iset.prompt, 
+                         "sampler": `${iset.sampler} ${iset.samplerSteps}`,
+                         "CFG": iset.cfg.toString(),
+                         "seed": image.seed.toString()}
         for (const key in entries) {
             const value = entries[key]
             const keySpan = createElement('span', {'class': "detailsKey"})
