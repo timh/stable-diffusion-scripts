@@ -113,7 +113,7 @@ def parse_args() -> argparse.Namespace:
     if config.cfgs is None:
         config.cfgs = [["7"]]
     if config.samplers is None:
-        config.samplers = [["ddim:30"]]
+        config.samplers = [["dpm++1:20"]]
 
     config.prompts = [inside for outside in config.prompts for inside in outside]
     config.negative_prompts = [inside for outside in config.negative_prompts for inside in outside]

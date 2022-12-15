@@ -67,7 +67,7 @@ class ImageSet:
 
         if not model_str and model_dir:
             path_components = model_dir.split("/")
-            last_component = path_components[-1].replace("checkpoint-", "")
+            last_component = path_components[-1].replace("checkpoint-", "").replace("save-", "")
             if len(path_components) >= 2 and all([c.isdigit() for c in last_component]):
                 model_steps = last_component
                 model_name = path_components[-2]
@@ -90,7 +90,7 @@ class ImageSet:
 
         prompt_str = self.prompt
         if self.negative_prompt:
-            prompt_str += f"+{negative_prompt}"
+            prompt_str += f" || {negative_prompt}"
 
         self.output_dir = f"{root_output_dir}/{self.model_str}--{prompt_str}--{self.sampler_name}_{self.sampler_steps},c{self.guidance_scale:02}"
 

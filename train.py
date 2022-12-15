@@ -83,7 +83,6 @@ class Config(argparse.Namespace):
                 "--learning_rate", str(self.learning_rate),
                 "--lr_scheduler", self.lr_scheduler,
                 "--train_batch_size", str(self.train_batch_size),
-                "--save_steps", str(self.save_interval),
                 # "--save_interval", str(self.save_interval),
                 # "--save_min_steps", str(self.save_min_steps),
                 # "--save_infer_steps=50",
@@ -100,6 +99,10 @@ class Config(argparse.Namespace):
                 "--lr_warmup_steps=0",
                 "--mixed_precision=bf16"]
 
+        if self.save_interval:
+            args.extend(["--save_steps", str(self.save_interval)])
+        if self.save_epochs:
+            args.extend(["--save_epochs", str(self.save_epochs)])
         if max_train_steps:
             args.extend(["--max_train_steps", str(max_train_steps)])
         if self.num_train_epochs:
@@ -175,6 +178,7 @@ def parse_args() -> Config:
     parser.add_argument("--epochs", dest='num_train_epochs', type=int, help="number epochs")
     parser.add_argument("--model", dest='input_model_name', default="runwayml/stable-diffusion-v1-5", help="name or path for base model")
     parser.add_argument("--save_interval", type=int, default=500, help="save every <N> steps")
+    parser.add_argument("--save_epochs", type=int, default=0, help="save every <N> epochs")
     parser.add_argument("--save_min_steps", type=int, default=500, help="only save checkpoints at or greater than <N> steps")
     parser.add_argument("--train_batch_size", type=int, default=1, help="train batch size")
     parser.add_argument("--dry_run", default=False, help="dry run: don't do actions", action='store_true')
