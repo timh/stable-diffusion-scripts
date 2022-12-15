@@ -1,4 +1,5 @@
-import { GImageSet, FIELDS, createElement, sort } from "./types.js"
+import { GImageSet, FIELDS } from "./types.js"
+import { createElement, sort } from "./util.js"
 import { GImageGrid, STORE_HIDDEN } from "./grid.js"
 
 class GridHeader {

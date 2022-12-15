@@ -73,8 +73,11 @@ function loadImageSets(filenames: string[]): Map<string, GImageSet> {
             modelName = modelName.replace("-warmup", " warmup")
             modelName = modelName.replace("_r0", "") // temp
 
+            const modelStepsAdjusted = modelSteps * modelBatch * parseFloat(modelLR)
+
             var iset = new GImageSet({modelName: modelName, modelNameOrig: modelNameOrig, modelSeed: modelSeed, modelSteps: modelSteps, 
                                       modelBatch: modelBatch, modelLR: modelLR,
+                                      modelStepsAdjusted: modelStepsAdjusted,
                                       prompt: prompt, 
                                       sampler: sampler, samplerSteps: samplerSteps, cfg: cfg})
             // var iset = new GImageSet(modelName, modelSeed, modelSteps, prompt, sampler, samplerSteps, cfg)

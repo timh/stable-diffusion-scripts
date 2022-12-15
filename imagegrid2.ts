@@ -1,4 +1,5 @@
-import { GImage, GImageSet, FIELDS, FIELDS_SHORT, sort, createElement, Visibility } from "./types.js"
+import { GImage, GImageSet, FIELDS, FIELDS_SHORT, Visibility } from "./types.js"
+import { sort, createElement } from "./util.js"
 import { loadImageSets } from "./build.js"
 import { StoredVal } from "./storage.js"
 import { GImageGrid, STORE_HIDDEN } from "./grid.js"
@@ -283,7 +284,8 @@ function renderImageSet(iset: GImageSet) {
 
         const entries = {"modelName": iset.modelName,
                          "modelOrig": iset.modelNameOrig,
-                         "modelStr": iset.modelStr, 
+                         "modelStr": iset.modelStr,
+                         "modelSteps": iset.modelSteps,
                          "prompt": iset.prompt, 
                          "sampler": `${iset.sampler} ${iset.samplerSteps}`,
                          "CFG": iset.cfg.toString(),

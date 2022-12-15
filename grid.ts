@@ -1,4 +1,5 @@
-import { GImage, GImageSet, Visibility, FIELDS, sort } from "./types.js"
+import { GImage, GImageSet, Visibility, FIELDS } from "./types.js"
+import { sort } from "./util.js"
 import { StoredVal } from "./storage.js"
 
 const STORE_HIDDEN = new StoredVal('hidden', new Set<String>(), 
