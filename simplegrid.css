@@ -1,0 +1,31 @@
+#images {
+    display: grid;
+}
+
+.image {
+    width: auto;
+}
+
+.image img.thumbnail {
+    width: 128;
+    height: 128;
+}
+
+.image img.fullsize {
+    position: absolute;
+    visibility: hidden;
+}
+
+.image:hover img.fullsize {
+    visibility: visible;
+    z-index: 1;
+
+    margin-top: 60px;
+    margin-left: -60px;
+
+    border-style: solid;
+    border-width: 3px;
+    border-color: white;
+    border-radius: 5px;
+}
+</style>
