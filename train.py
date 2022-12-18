@@ -4,6 +4,8 @@ import argparse
 from pathlib import Path
 import subprocess
 import shlex
+import datetime
+import hashlib
 from typing import List
 
 def args_to_quoted_str(args: List[str]) -> str:
@@ -123,7 +125,6 @@ class Config(argparse.Namespace):
         print(f"   class_prompt: {self.class_prompt}")
         print(f"           args: {args_to_quoted_str(args)}")
 
-
         txt_filename = Path(output_dir).joinpath("train-cmdline.txt")
         if not self.dry_run:
             print(f"** write {txt_filename.absolute()}")
@@ -135,6 +136,22 @@ class Config(argparse.Namespace):
                 output.write(f"train.py:\n")
                 output.write(f"# {args_to_quoted_str(sys.argv[1:])}\n")
 
+                paths = [path for path in Path(self.instance_dir).iterdir() if path.suffix in [".jpg", ".jpeg", ".png", ".webp"]]
+
+                output.write("\n")
+                output.write(f"instance_dir {self.instance_dir} has {len(paths)} images:\n")
+                for image_path in paths:
+                    hashstr = hashlib.sha256(open(image_path, "rb").read()).hexdigest()
+                    output.write(f"  {image_path.name}: sha256 {hashstr}\n")
+
+            # place the config in the global training history
+            timestr = datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d-%H%M%S.txt")
+            global_path = Path(self.output_root, "training-history", timestr)
+            global_path.parent.mkdir(exist_ok=True)
+            print(f"** write {global_path.absolute()}")
+            copy_args = ["cp", txt_filename.absolute(), global_path.absolute()]
+            subprocess.run(copy_args)
+
             res = subprocess.run(args, stdout=sys.stdout, stderr=sys.stderr, check=True)
             print(res.stdout)
 
@@ -142,19 +159,19 @@ class Config(argparse.Namespace):
             for subdir in Path(output_dir).iterdir():
                 if not subdir.is_dir() or not subdir.name.startswith("checkpoint-"):
                     continue
-                args = ["cp", txt_filename.absolute(), subdir.absolute()]
+                copy_args = ["cp", txt_filename.absolute(), subdir.absolute()]
                 print(f"** write {subdir.absolute()}/train-cmdline.txt")
-                res = subprocess.run(args)
+                res = subprocess.run(copy_args)
 
         if prior_steps != 0:
             for steps in range(self.save_interval, max_train_steps+1, self.save_interval):
                 src = f"{output_dir}/checkpoint-{steps}"
                 dest = f"{output_dir_base}/checkpoint-{steps + prior_steps}"
-                args = ["mv", src, dest]
+                move_args = ["mv", src, dest]
 
                 print(f"run_one: prior steps: moving {src} to {dest}")
                 if not self.dry_run:
-                    res = subprocess.run(args, stdout=sys.stdout, stderr=sys.stderr, check=True)
+                    res = subprocess.run(move_args, stdout=sys.stdout, stderr=sys.stderr, check=True)
                     if res.stdout:
                         print(str(res.capture_output, "utf-8"))
     def run(self):
