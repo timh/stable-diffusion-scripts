@@ -19,18 +19,14 @@ if False:
     OUTPUT_DIR = "./logs/cat"
 else:
     # for human faces 5e-6
-    LR = "1e-5"
-    # MODIFIER_TOKEN = "<new1>"
-    # INSTANCE_PROMPT = "photo of <new1> person"
+    LR = "5.0e-6"
     MODIFIER_TOKEN = "timhin"
-    INSTANCE_PROMPT = "photo of timhin"
+    INSTANCE_PROMPT = "timhin person"
     INSTANCE_DIR = "/home/tim/devel/images.tim/15-512px"
     CLASS_DIR = "/home/tim/devel/class_images-MirageML/Mix"
-    CLASS_PROMPT = "photo of person"
-    # STEPS = 750
+    CLASS_PROMPT = "person"
     STEPS = len(list(Path(INSTANCE_DIR).iterdir())) * 500
-    OUTPUT_DIR = f"/home/tim/models/tim15-custom@{LR}_{STEPS:05}"
-
+    OUTPUT_DIR = f"/home/tim/models/tim15-custom/timperson15@{LR}_{STEPS:05}"
 
 args = [
     "accelerate", "launch", "src/diffuser_training.py",
@@ -62,9 +58,6 @@ print(cmdline)
 txtfile = Path(OUTPUT_DIR, "train-custom-diffusion.txt")
 txtfile.parent.mkdir(exist_ok=True)
 with open(txtfile, "w") as txt:
-    txt.write(cmdline)
+    txt.write(cmdline + "\n")
 
 subprocess.run(args)
-
-
-#python src/get_deltas.py --path logs/<folder-name> --newtoken 1
