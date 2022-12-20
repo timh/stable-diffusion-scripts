@@ -35,39 +35,23 @@ class Config(argparse.Namespace):
     def _output_dir(self, seed:int) -> str:
         return f"{self.output_root}/{self.name}_r{seed}"
 
-    def _find_prior_steps_trained(self, output_dir:str) -> int:
-        if not os.path.exists(output_dir):
-            return 0
-        
-        max_steps: int = 0
-        for dirname in os.listdir(output_dir):
-            if not dirname.startswith("checkpoint-"):
-                continue
-            steps = int(dirname.split("-")[-1])
-            max_steps = max(max_steps, steps)
-        
-        return max_steps
-    
     def run_one(self, seed:int):
         input_model_name = self.input_model_name
         output_dir_base = self._output_dir(seed)
         output_dir = output_dir_base
 
-        max_train_steps = 0
-        prior_steps = 0
-        if self.max_train_steps:
-            prior_steps = self._find_prior_steps_trained(output_dir_base)
-            max_train_steps = self.max_train_steps - prior_steps
-            if prior_steps != 0:
-                print(f"{output_dir_base}: found existing model with {prior_steps} steps already trained")
-                input_model_name = f"{output_dir_base}/checkpoint-{prior_steps}"
-                output_dir = f"{output_dir_base}+{prior_steps}"
-        
-            if max_train_steps <= 0:
-                print(f"** nothing to do, max_train_steps is {max_train_steps}")
-                return
-        
-        use_shivam = True # True if we're using github.com/ShivamShrirao/diffusers
+        # ensure that max_train_steps and save_interval are multiples of our training set size
+        num_instance_images = len(list(Path(self.instance_dir).iterdir()))
+        if self.save_interval % num_instance_images != 0:
+            new_save_interval = int(self.save_interval / num_instance_images) * num_instance_images
+            print(f"** have {num_instance_images} images: changing save_interval from {self.save_interval} to {new_save_interval}")
+            self.save_interval = new_save_interval
+        if self.max_train_steps % num_instance_images != 0:
+            new_max_train_steps = int(self.max_train_steps / num_instance_images) * num_instance_images
+            print(f"** have {num_instance_images} images: changing max_train_steps from {self.max_train_steps} to {new_max_train_steps}")
+            self.max_train_steps = new_max_train_steps
+
+        use_shivam = False # True if we're using github.com/ShivamShrirao/diffusers
         
         class_args: List[str] = []
         num_class_images = 0
@@ -110,14 +94,14 @@ class Config(argparse.Namespace):
 
         if self.save_interval and use_shivam:
             args.extend(["--save_interval", str(self.save_interval)])
-            args.extend(["--save_min_steps", str(int(max_train_steps / 2))])
+            args.extend(["--save_min_steps", str(int(self.max_train_steps / 2))])
         elif self.save_interval:
             args.extend(["--save_steps", str(self.save_interval)])
 
         if self.save_epochs:
             args.extend(["--save_epochs", str(self.save_epochs)])
-        if max_train_steps:
-            args.extend(["--max_train_steps", str(max_train_steps)])
+        if self.max_train_steps:
+            args.extend(["--max_train_steps", str(self.max_train_steps)])
         if self.num_train_epochs:
             args.extend(["--num_train_epochs", str(self.num_train_epochs)])
 
@@ -165,23 +149,12 @@ class Config(argparse.Namespace):
 
             # copy the config to all the checkpoint directories
             for subdir in Path(output_dir).iterdir():
-                if not subdir.is_dir() or not subdir.name.startswith("checkpoint-"):
+                if not subdir.is_dir() or (not subdir.name.startswith("checkpoint-") and not subdir.name.startswith("save-")):
                     continue
                 copy_args = ["cp", txt_filename.absolute(), subdir.absolute()]
                 print(f"** write {subdir.absolute()}/train-cmdline.txt")
                 res = subprocess.run(copy_args)
 
-        if prior_steps != 0:
-            for steps in range(self.save_interval, max_train_steps+1, self.save_interval):
-                src = f"{output_dir}/checkpoint-{steps}"
-                dest = f"{output_dir_base}/checkpoint-{steps + prior_steps}"
-                move_args = ["mv", src, dest]
-
-                print(f"run_one: prior steps: moving {src} to {dest}")
-                if not self.dry_run:
-                    res = subprocess.run(move_args, stdout=sys.stdout, stderr=sys.stderr, check=True)
-                    if res.stdout:
-                        print(str(res.capture_output, "utf-8"))
     def run(self):
         for seed in self.seeds.split(","):
             self.run_one(seed)
