@@ -169,10 +169,10 @@ function renderCheckStats() {
         for (const [idx, value] of values.entries()) {
             html += "<li>"
             if (field == 'prompt') {
-                html += `"${value}"`
+                html += `"${encodeURIComponent(value)}"`
             }
             else {
-                html += value.toString()
+                html += encodeURIComponent(value.toString())
             }
             html += `: ${fieldStats.get(value)}</li>\n`
         }
@@ -216,7 +216,8 @@ function renderGridHeaders() {
             if (shortLabel != undefined) {
                 text += `${shortLabel} `
             }
-            text += `${value}<br/>\n`
+            const encValue = value.toString().replace("<", "&lt;").replace(">", "&gt;")
+            text += `${encValue}<br/>\n`
 
             lastValues[field] = value
         }

@@ -3,11 +3,11 @@ from typing import Callable, List
 import os
 import sys
 import torch
-import PIL, PIL.Image
+import PIL, PIL.Image, PIL.ImageDraw
 import json
 from PIL.PngImagePlugin import PngInfo
 
-from diffusers import DiffusionPipeline, StableDiffusionPipeline
+from diffusers import DiffusionPipeline, StableDiffusionPipeline, StableDiffusionInpaintPipeline
 from diffusers import DDIMScheduler, EulerDiscreteScheduler # works for SD2
 from diffusers import EulerAncestralDiscreteScheduler, DPMSolverMultistepScheduler, KarrasVeScheduler, ScoreSdeVeScheduler # doesn't work for SD2
 
@@ -106,6 +106,9 @@ class ImageGenerator:
 
     num_parallel: int = 0
 
+    image_blank: PIL.Image = None
+    image_mask: PIL.Image = None
+
     def __init__(self, num_parallel: int = 1):
         self.num_parallel = num_parallel
 
@@ -114,6 +117,11 @@ class ImageGenerator:
 
         def _save_image(image_set: ImageSet, idx: int, filename: str, image: PIL.Image.Image, metadata: PngInfo):
             image.save(filename, pnginfo=metadata)
+        
+        inpainting = "inpainting" in image_set.model_str
+        if inpainting and self.image_blank is None:
+            self.image_blank = PIL.Image.new(mode="RGB", size=(512, 512))
+            self.image_mask = PIL.Image.new(mode="RGB", size=(512, 512), color="white")
 
         if save_image_fun is None:
             save_image_fun = _save_image
@@ -129,7 +137,11 @@ class ImageGenerator:
         
         # re-create scheduler/pipeline only when the sampler or model changes.
         if image_set.model_dir != self.last_model_dir:
-            self.pipeline = StableDiffusionPipeline.from_pretrained(image_set.model_dir, revision="fp16", torch_dtype=torch.float16, safety_checker=None)
+            if inpainting:
+                self.pipeline = StableDiffusionInpaintPipeline.from_pretrained(image_set.model_dir, revision="fp16", torch_dtype=torch.float16, safety_checker=None)
+            else:
+                self.pipeline = StableDiffusionPipeline.from_pretrained(image_set.model_dir, revision="fp16", torch_dtype=torch.float16, safety_checker=None)
+
             self.pipeline = self.pipeline.to("cuda")
             self.last_model_dir = image_set.model_dir
 
@@ -150,7 +162,11 @@ class ImageGenerator:
                 kwargs['width'] = image_set.width
             if image_set.height != 0:
                 kwargs['height'] = image_set.height
-            
+
+            if inpainting:
+                kwargs['image'] = self.image_blank
+                kwargs['mask_image'] = self.image_mask
+
             seed = image_set.seed + num_existing
             generator = torch.Generator("cuda").manual_seed(seed)
             images: List[PIL.Image.Image] = \

@@ -66,11 +66,16 @@ class Config(argparse.Namespace):
             if max_train_steps <= 0:
                 print(f"** nothing to do, max_train_steps is {max_train_steps}")
                 return
-
+        
+        use_shivam = True # True if we're using github.com/ShivamShrirao/diffusers
+        
         class_args: List[str] = []
+        num_class_images = 0
         if self.class_prompt is not None:
             class_args.extend(["--class_prompt", self.class_prompt])
             class_args.extend(["--class_data_dir", self.class_dir])
+            num_class_images = len(list(Path(self.class_dir).iterdir()))
+            class_args.extend(["--num_class_images", str(num_class_images)])
             class_args.append("--with_prior_preservation")
             class_args.append("--prior_loss_weight=1.0")
 
@@ -99,10 +104,16 @@ class Config(argparse.Namespace):
                 "--gradient_checkpointing",
                 "--use_8bit_adam",
                 "--lr_warmup_steps=0",
-                "--mixed_precision=bf16"]
+                "--mixed_precision=bf16",
+                # "--checkpointing_steps=10000"
+                ]
 
-        if self.save_interval:
+        if self.save_interval and use_shivam:
+            args.extend(["--save_interval", str(self.save_interval)])
+            args.extend(["--save_min_steps", str(int(max_train_steps / 2))])
+        elif self.save_interval:
             args.extend(["--save_steps", str(self.save_interval)])
+
         if self.save_epochs:
             args.extend(["--save_epochs", str(self.save_epochs)])
         if max_train_steps:
@@ -110,11 +121,8 @@ class Config(argparse.Namespace):
         if self.num_train_epochs:
             args.extend(["--num_train_epochs", str(self.num_train_epochs)])
 
-        if "inpainting" in self.input_model_name:
+        if use_shivam and "inpainting" in self.input_model_name:
             args.append("--not_cache_latents")
-        else:
-            # args.extend(["--save_sample_prompt", self.instance_prompt])
-            pass
 
         print(f"run_one:")
         print(f"     output_dir: {output_dir}")
