@@ -58,9 +58,19 @@
 
 #imagegrid span.image:hover span.details {
   visibility: visible;
+  display: grid;
+}
+
+#imagegrid img.fullsize {
+  grid-column: 1;
+  grid-row: 1;
 }
 
 #imagegrid .details_grid {
+  grid-column: 1;
+  grid-row: 1;
+  z-index: 2;
+  height: min-content;
   display: grid;
   grid-template-columns: max-content;
   column-gap: 20px;
