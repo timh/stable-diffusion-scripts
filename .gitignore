@@ -13,6 +13,7 @@
 **/grid_headers.js
 **/storage.js
 **/imagevote.js
+**/util.js
 **/.DS_Store
 node_modules/**
 **/__pycache__
