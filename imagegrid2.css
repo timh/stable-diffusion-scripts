@@ -42,8 +42,8 @@
 #imagegrid span.image span.details {
   position: absolute;
   visibility: hidden;
-  margin-top: 60px;
-  margin-left: -68px; /* -128px + 60px */
+  margin-top: -64px;
+  margin-left: 64px;
   width: max-content;
   height: max-content;
   padding: 5px;
