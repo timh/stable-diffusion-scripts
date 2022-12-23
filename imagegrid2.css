@@ -49,11 +49,13 @@
   padding: 5px;
   border: 5px;
   border-radius: 5px;
-  background-color: black;
-  color: white;
   position: absolute;
   width: min-content;
   z-index: 2;
+
+  background-color: black;
+  color: white;
+  text-shadow: black 1px 1px;
 }
 
 #imagegrid span.image:hover span.details {
@@ -78,11 +80,13 @@
 
 #imagegrid .details_grid .detailsKey {
   grid-column: 1;
+  font-size: 90%;
 }
 
 #imagegrid .details_grid .detailsVal {
   grid-column: 2;
   font-family: 'Courier New', Courier, monospace;
+  font-size: 85%;
 }
 
 #chooser {
