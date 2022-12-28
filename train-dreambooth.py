@@ -8,6 +8,7 @@ import datetime
 import hashlib
 from typing import List
 
+# 350-600 steps for the text encoder
 def args_to_quoted_str(args: List[str]) -> str:
     def one_arg(s: str) -> str:
         if " " in s:
@@ -42,14 +43,6 @@ class Config(argparse.Namespace):
 
         # ensure that max_train_steps and save_interval are multiples of our training set size
         num_instance_images = len(list(Path(self.instance_dir).iterdir()))
-        if self.save_interval % num_instance_images != 0:
-            new_save_interval = int(self.save_interval / num_instance_images) * num_instance_images
-            print(f"** have {num_instance_images} images: changing save_interval from {self.save_interval} to {new_save_interval}")
-            self.save_interval = new_save_interval
-        if self.max_train_steps % num_instance_images != 0:
-            new_max_train_steps = int(self.max_train_steps / num_instance_images) * num_instance_images
-            print(f"** have {num_instance_images} images: changing max_train_steps from {self.max_train_steps} to {new_max_train_steps}")
-            self.max_train_steps = new_max_train_steps
 
         use_shivam = False # True if we're using github.com/ShivamShrirao/diffusers
         
@@ -83,13 +76,14 @@ class Config(argparse.Namespace):
                 # "--pretrained_vae_name_or_path=stabilityai/sd-vae-ft-mse",
                 # "--resolution=512",
                 "--train_text_encoder",
+                "--train_text_encoder_steps=350",
                 "--sample_batch_size=1",
-                "--gradient_accumulation_steps=1",
+                "--gradient_accumulation_steps", str(self.gradient_accumulation_steps),
                 "--gradient_checkpointing",
                 "--use_8bit_adam",
                 "--lr_warmup_steps=0",
                 "--mixed_precision=bf16",
-                # "--checkpointing_steps=10000"
+                "--checkpointing_steps=100000"
                 ]
 
         if self.save_interval and use_shivam:
@@ -179,6 +173,7 @@ def parse_args() -> Config:
     parser.add_argument("--save_epochs", type=int, default=0, help="save every <N> epochs")
     parser.add_argument("--save_min_steps", type=int, default=500, help="only save checkpoints at or greater than <N> steps")
     parser.add_argument("--train_batch_size", type=int, default=1, help="train batch size")
+    parser.add_argument("--gradient_accumulation_steps", type=int, default=1, help="grad accum steps")
     parser.add_argument("--dry_run", default=False, help="dry run: don't do actions", action='store_true')
 
     cfg = Config()
