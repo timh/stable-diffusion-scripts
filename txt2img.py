@@ -6,10 +6,21 @@ import torch
 import PIL, PIL.Image, PIL.ImageDraw
 import json
 from PIL.PngImagePlugin import PngInfo
+import importlib, importlib_metadata
 
 from diffusers import DiffusionPipeline, StableDiffusionPipeline, StableDiffusionInpaintPipeline
 from diffusers import DDIMScheduler, EulerDiscreteScheduler # works for SD2
 from diffusers import EulerAncestralDiscreteScheduler, DPMSolverMultistepScheduler, KarrasVeScheduler, ScoreSdeVeScheduler # doesn't work for SD2
+
+# from diffusers/examples/dreambooth/train-dreambooth.py
+_xformers_available = importlib.util.find_spec("xformers") is not None
+try:
+    _xformers_version = importlib_metadata.version("xformers")
+    _xformers_available = True
+    print(f"Using xformers")
+except importlib_metadata.PackageNotFoundError:
+    _xformers_available = False
+    print(f"xformers not available")
 
 # -- from diffusers docs:
 # from diffusers import DiffusionPipeline, DPMSolverMultistepScheduler
@@ -148,6 +159,10 @@ class ImageGenerator:
 
             self.pipeline = self.pipeline.to("cuda")
             self.last_model_dir = image_set.model_dir
+
+            if _xformers_available:
+                self.pipeline.unet.enable_xformers_memory_efficient_attention()
+
 
         if image_set.sampler_name != self.last_sampler_name or self.pipeline.scheduler is None:
             scheduler_fun = SCHEDULERS[image_set.sampler_name]
