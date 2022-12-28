@@ -93,6 +93,10 @@ class ImageSet:
             prompt_str += f" || {negative_prompt}"
 
         self.output_dir = f"{root_output_dir}/{self.model_str}--{prompt_str}--{self.sampler_name}_{self.sampler_steps},c{self.guidance_scale:02}"
+        if self.width:
+            self.output_dir += f",width{self.width}"
+        if self.height:
+            self.output_dir += f",height{self.height}"
 
         if self.sampler_name not in SCHEDULERS:
             raise Exception(f"unknown scheduler '{self.sampler_name}'")
