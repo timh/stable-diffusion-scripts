@@ -1,5 +1,5 @@
-from diffusers import StableDiffusionPipeline
-from lora_diffusion import monkeypatch_lora, monkeypatch_replace_lora, tune_lora_scale
+from diffusers import StableDiffusionPipeline, DPMSolverMultistepScheduler
+from lora_diffusion import monkeypatch_lora, monkeypatch_replace_lora, tune_lora_scale, patch_pipe
 from PIL import Image, ImageFont, ImageDraw
 from fonts.ttf import Roboto
 
@@ -12,31 +12,40 @@ import math
 from pathlib import Path
 import datetime
 
-BASE_MODEL = "/home/tim/models/stable-diffusion-v1-5+vae"
-LORA_UNET_PATH = Path("/home/tim/models/alex22-f222v-lora-batch1@1e-4,5e-5/lora_weight.pt")
+# BASE_MODEL = "/home/tim/models/stable-diffusion-v1-5+vae"
+BASE_MODEL = "/home/tim/models/ppp"
 
 SIZE = 512
-PROMPT = "portrait photo of alexhin"
-OUTPUT_FILENAME = "output.png"
-OUTPUT_TEMP = "output-temp.png"
-BASE_SEED = 2
+# PROMPT = "portrait photo of alexhin"
+PROMPT = "portrait photo of <alex>"
+OUTPUT_TEMP = "outputs/output-temp.png"
+BASE_SEED = 0
 NUM_IMAGES = 1
 
-MIN = 0.0
-MAX = 1.0
-DIFF = MAX - MIN
-NUM_STEPS = 10
+MIN_UNET = 0.6
+MAX_UNET = 1.0
+DIFF_UNET = MAX_UNET - MIN_UNET
+
+MIN_TEXT = 0.0
+MAX_TEXT = 1.0
+DIFF_TEXT = MAX_TEXT - MIN_TEXT
+
+NUM_STEPS = 11
 
 if __name__ == "__main__":
-    unet_path = Path(sys.argv[1]) if len(sys.argv) > 1 else LORA_UNET_PATH
-    text_path = unet_path.with_suffix(".text_encoder.pt")
+    # unet_path = Path(sys.argv[1]) if len(sys.argv) > 1 else LORA_UNET_PATH
+    # text_path = unet_path.with_suffix(".text_encoder.pt")
+    unet_path = sys.argv[1]
+    output = "outputs/" + Path(unet_path).parent.name + "--" + Path(unet_path).stem + ".png"
 
     print(f"unet_path {unet_path}")
-    print(f"text_path {text_path}")
+    print(f"output {output}")
 
     pipe = StableDiffusionPipeline.from_pretrained(BASE_MODEL, torch_dtype=torch.float16, safety_checker=None).to("cuda")
-    monkeypatch_lora(pipe.unet, torch.load(unet_path))
-    monkeypatch_lora(pipe.text_encoder, torch.load(text_path), target_replace_module=["CLIPAttention"])
+    pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config, algorithm_type='dpmsolver++', solver_order=1)
+    patch_pipe(pipe, unet_path, "<alex>", patch_text=True, patch_ti=True, patch_unet=True)
+    # monkeypatch_lora(pipe.unet, torch.load(unet_path))
+    # monkeypatch_lora(pipe.text_encoder, torch.load(text_path), target_replace_module=["CLIPAttention"])
 
     width = SIZE * NUM_STEPS
     height = SIZE * NUM_STEPS * NUM_IMAGES
@@ -46,11 +55,11 @@ if __name__ == "__main__":
 
     time_start = datetime.datetime.now()
     for unet_idx in range(NUM_STEPS):
-        unet_weight = unet_idx * (DIFF / (NUM_STEPS-1)) + MIN
+        unet_weight = unet_idx * (DIFF_UNET / (NUM_STEPS-1)) + MIN_UNET
 
         x = unet_idx * SIZE
         for text_idx in range(NUM_STEPS):
-            text_weight = text_idx * (DIFF / (NUM_STEPS-1)) + MIN
+            text_weight = text_idx * (DIFF_TEXT / (NUM_STEPS-1)) + MIN_TEXT
 
             tune_lora_scale(pipe.unet, unet_weight)
             tune_lora_scale(pipe.text_encoder, text_weight)
@@ -68,16 +77,14 @@ if __name__ == "__main__":
                 draw.text(xy=(x, y), text=text, font=font, fill="white")
 
         overall_image.save(OUTPUT_TEMP)
-        os.system(f"mv {OUTPUT_TEMP} {OUTPUT_FILENAME}")
+        os.system(f"mv {OUTPUT_TEMP} {output}")
     
     font = ImageFont.truetype(Roboto, 60)
-    text = f"{unet_path.parent.name}/{unet_path.name}"
+    text = f"{output}"
     draw.text(xy=(1, 451), text=text, font=font, fill="black")
     draw.text(xy=(0, 450), text=text, font=font, fill="white")
     overall_image.save(OUTPUT_TEMP)
-    os.system(f"mv {OUTPUT_TEMP} {OUTPUT_FILENAME}")
+    os.system(f"mv {OUTPUT_TEMP} {output}")
 
     time_end = datetime.datetime.now()
     print(f"time taken: {time_end - time_start}")
-
-

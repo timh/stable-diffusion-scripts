@@ -66,15 +66,10 @@ class Config(argparse.Namespace):
                 *class_args,
                 "--learning_rate", str(self.learning_rate),
                 "--lr_scheduler", self.lr_scheduler,
+                *(["--lr_num_cycles", str(self.lr_num_cycles)] if self.lr_num_cycles else []),
                 "--train_batch_size", str(self.train_batch_size),
-                # "--save_interval", str(self.save_interval),
-                # "--save_min_steps", str(self.save_min_steps),
-                # "--save_infer_steps=50",
-                # "--n_save_sample=10",
                 "--seed", str(seed),
                 "--pretrained_model_name_or_path", input_model_name,
-                # "--pretrained_vae_name_or_path=stabilityai/sd-vae-ft-mse",
-                # "--resolution=512",
                 "--train_text_encoder",
                 "--train_text_encoder_steps=350",
                 "--sample_batch_size=1",
@@ -83,7 +78,8 @@ class Config(argparse.Namespace):
                 "--use_8bit_adam",
                 "--lr_warmup_steps=0",
                 "--mixed_precision=bf16",
-                "--checkpointing_steps=100000"
+                "--checkpointing_steps", str(self.max_train_steps),
+                "--enable_xformers_memory_efficient_attention"
                 ]
 
         if self.save_interval and use_shivam:
@@ -165,6 +161,7 @@ def parse_args() -> Config:
     parser.add_argument("--instance_prompt", required=True, help="instance prompt")
     parser.add_argument("--learning_rate", "--lr", "-l", default="2e-6", help="learning rate")
     parser.add_argument("--lr_scheduler", default="polynomial", help="scheduler type: constant, linear, cosine, polynomial")
+    parser.add_argument("--lr_num_cycles", default=0, help="Number of hard resets of the lr in cosine_with_restarts scheduler")
     parser.add_argument("--seeds", "-S", default="1", help="random seeds (comma separated for multiple)")
     parser.add_argument("--steps", "-s", dest='max_train_steps', type=int, help="number of training steps")
     parser.add_argument("--epochs", dest='num_train_epochs', type=int, help="number epochs")

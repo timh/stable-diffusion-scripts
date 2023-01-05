@@ -34,7 +34,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--name", "-n", required=True, help="base name of model to train, e.g., alex")
     parser.add_argument("--reg_dir", default="/home/tim/devel/class_images-MirageML/kohya-Mix", help="regularization images directory")
     parser.add_argument("--instance_dir", required=True)
-    parser.add_argument("--epochs", dest="num_epochs", type=int, default=200, help="total epochs to train")
+    parser.add_argument("--epochs", dest="num_epochs", type=int, default=300, help="total epochs to train")
     parser.add_argument("--text_epochs", dest="num_text_epochs_list", action='append', nargs="+", help="total text epochs to train (can be multiple)")
     parser.add_argument("--lr", default="1.0e-6", help="learning rate for the steps after text training")
     parser.add_argument("--text_lr", default="2.0e-6", help="learning rate for the steps after text training")
@@ -48,8 +48,6 @@ def parse_args() -> argparse.Namespace:
     # swizzle arguments.
     cfg.num_images = count_images(Path(cfg.instance_dir))
     cfg.steps_per_epoch = math.ceil(cfg.num_images * 2 / cfg.batch)
-    if not cfg.num_epochs:
-        cfg.num_epochs = 200
     
     cfg.num_steps = cfg.num_epochs * cfg.steps_per_epoch
 
@@ -59,17 +57,19 @@ def parse_args() -> argparse.Namespace:
     print(f"num_images = {cfg.num_images}")
 
     if cfg.save_epochs == -1:
-        cfg.save_epochs = int(cfg.num_epochs / 5)
+        cfg.save_epochs = int(cfg.num_epochs / 3)
 
     if "stable-diffusion-v1-5" in cfg.model:
         cfg.model_short = "sd15"
     elif "stable-diffusion-2-1" in cfg.model:
         cfg.model_short = "sd21"
+    elif "stable-diffusion-inpainting" in cfg.model:
+        cfg.model_short = "sd15inpaint"
     else:
-        cfg.model_short = cfg.model
+        cfg.model_short = Path(cfg.model).name
     
     if cfg.num_text_epochs_list is None:
-        cfg.num_text_epochs_list = [["50", "100", "150"]]
+        cfg.num_text_epochs_list = [["25", "50", "100", "150"]]
     
     cfg.num_text_epochs_list = map(int, [int(inside) for outside in cfg.num_text_epochs_list for inside in outside])
 
@@ -87,7 +87,8 @@ if __name__ == "__main__":
                     "kohya",
                     cfg.model_short,
                     f"batch{cfg.batch}",
-                    f"te{num_text_steps:03}_{cfg.text_lr_short}"]
+                    f"text_epochs{num_text_epochs:03}",
+                    f"text_steps{num_text_steps:04}_{cfg.text_lr_short}"]
         outdir = "-".join(outdir)
         outdir = f"{cfg.output_root}/{outdir}@{cfg.lr_short}_r{cfg.seed}"
 
