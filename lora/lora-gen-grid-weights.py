@@ -11,41 +11,35 @@ import os, sys, re
 import math
 from pathlib import Path
 import datetime
+import numpy as np
 
 # BASE_MODEL = "/home/tim/models/stable-diffusion-v1-5+vae"
-BASE_MODEL = "/home/tim/models/ppp"
+BASE_MODEL = "/home/tim/models/f222v"
+# BASE_MODEL = "/home/tim/models/f222"
 
 SIZE = 512
-# PROMPT = "portrait photo of alexhin"
 PROMPT = "portrait photo of <alex>"
 OUTPUT_TEMP = "outputs/output-temp.png"
 BASE_SEED = 0
 NUM_IMAGES = 1
 
-MIN_UNET = 0.6
-MAX_UNET = 1.0
-DIFF_UNET = MAX_UNET - MIN_UNET
+NUM_STEPS = 6
+RANGE_UNET = list(np.linspace(0.5, 1.0, NUM_STEPS))
+RANGE_TEXT = list(np.linspace(0.5, 1.0, NUM_STEPS))
 
-MIN_TEXT = 0.0
-MAX_TEXT = 1.0
-DIFF_TEXT = MAX_TEXT - MIN_TEXT
-
-NUM_STEPS = 11
 
 if __name__ == "__main__":
     # unet_path = Path(sys.argv[1]) if len(sys.argv) > 1 else LORA_UNET_PATH
     # text_path = unet_path.with_suffix(".text_encoder.pt")
     unet_path = sys.argv[1]
-    output = "outputs/" + Path(unet_path).parent.name + "--" + Path(unet_path).stem + ".png"
-
+    output = "outputs/" + Path(unet_path).absolute().parent.name + "--" + Path(unet_path).absolute().stem + ".png"
+    Path("outputs").mkdir(exist_ok=True)
     print(f"unet_path {unet_path}")
     print(f"output {output}")
 
     pipe = StableDiffusionPipeline.from_pretrained(BASE_MODEL, torch_dtype=torch.float16, safety_checker=None).to("cuda")
     pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config, algorithm_type='dpmsolver++', solver_order=1)
     patch_pipe(pipe, unet_path, "<alex>", patch_text=True, patch_ti=True, patch_unet=True)
-    # monkeypatch_lora(pipe.unet, torch.load(unet_path))
-    # monkeypatch_lora(pipe.text_encoder, torch.load(text_path), target_replace_module=["CLIPAttention"])
 
     width = SIZE * NUM_STEPS
     height = SIZE * NUM_STEPS * NUM_IMAGES
@@ -54,13 +48,9 @@ if __name__ == "__main__":
     font = ImageFont.truetype(Roboto, 30)
 
     time_start = datetime.datetime.now()
-    for unet_idx in range(NUM_STEPS):
-        unet_weight = unet_idx * (DIFF_UNET / (NUM_STEPS-1)) + MIN_UNET
-
+    for unet_idx, unet_weight in enumerate(RANGE_UNET):
         x = unet_idx * SIZE
-        for text_idx in range(NUM_STEPS):
-            text_weight = text_idx * (DIFF_TEXT / (NUM_STEPS-1)) + MIN_TEXT
-
+        for text_idx, text_weight in enumerate(RANGE_TEXT):
             tune_lora_scale(pipe.unet, unet_weight)
             tune_lora_scale(pipe.text_encoder, text_weight)
 
