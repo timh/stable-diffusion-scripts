@@ -6,6 +6,9 @@ import hashlib
 from typing import Tuple, Set, List
 import argparse
 
+LR_SCHEDULER_DEFAULT = "constant"
+PRECISION_DEFAULT = "bf16"
+
 SUFFIXES = [".jpg", ".jpeg", ".png", ".webp"]
 def get_images(path: Path) -> List[Path]:
     res: List[Path] = list()
@@ -67,12 +70,17 @@ def prepare_native(cfg: argparse.Namespace, outdir: str) -> str:
     print(" ".join(args))
     subprocess.run(args, check=True)
 
+    vae_path = Path(f"{cfg.model}/vae")
+    if vae_path.exists():
+        pass
+    else:
+        vae_path = str(cfg.model)
     args = [
         "python", "finetune/prepare_buckets_latents.py",
         "--full_path", cfg.instance_dir,
-        "--max_resolution", "768,768",
+        "--max_resolution", f"{cfg.resolution},{cfg.resolution}",
         metadata_cap_filename, metadata_filename,
-        f"{cfg.model}/vae"
+        vae_path
     ]
     print(" ".join(args))
     subprocess.run(args, check=True)
@@ -88,6 +96,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--epochs", dest="num_epochs", type=int, default=300, help="total epochs to train")
     parser.add_argument("--repeats", dest="num_repeats", type=int, default=1, help="num/repeats for each image")
     parser.add_argument("--lr", default="1.0e-6", help="learning rate")
+    parser.add_argument("--lr_scheduler", default="constant", help=f"lr scheduler, default {LR_SCHEDULER_DEFAULT}")
+    parser.add_argument("--precision", default=PRECISION_DEFAULT, help=f"precision, default {PRECISION_DEFAULT}")
+    parser.add_argument("--text_lr", default="5e-5", help="learning rate")
     parser.add_argument("--model", default="runwayml/stable-diffusion-v1-5")
     parser.add_argument("--save_epochs", type=int, default=-1)
     parser.add_argument("--save_min_epochs", type=int, default=0, help="save only >= N epochs")
@@ -95,11 +106,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--dreambooth", "--db", dest="train_dreambooth", default=False, action='store_true', help="run dreambooth training?")
     parser.add_argument("--native", dest="train_native", default=False, action='store_true', help="run native training?")
+    parser.add_argument("--lora", dest="train_lora", default=False, action='store_true', help="run lora training?")
     parser.add_argument("--skip_prep", default=False, action='store_true', help="skip captioning/bucketing/prep of images")
+    parser.add_argument("--res", dest="resolution", default="512", help="resolution - e.g., 512, 768")
 
     cfg = parser.parse_args()
 
-    if cfg.train_dreambooth == cfg.train_native:
+    num_true = len([val for val in [cfg.train_dreambooth, cfg.train_native, cfg.train_lora] if val])
+    if num_true != 1:
         parser.error("one of --dreambooth or --native must be specified")
 
     if cfg.train_native and cfg.reg_dir is not None:
@@ -130,6 +144,12 @@ def parse_args() -> argparse.Namespace:
         cfg.model_short = "sd15"
     elif "stable-diffusion-2-1" in cfg.model:
         cfg.model_short = "sd21"
+        if "base" in cfg.model:
+            cfg.model_short += "base"
+    elif "stable-diffusion-2" in cfg.model:
+        cfg.model_short = "sd20"
+        if "base" in cfg.model:
+            cfg.model_short += "base"
     elif "stable-diffusion-inpainting" in cfg.model:
         cfg.model_short = "sd15inpaint"
     elif "hassanblend1.5" in cfg.model.lower():
@@ -138,8 +158,11 @@ def parse_args() -> argparse.Namespace:
         cfg.model_short = "hassan1.4"
     else:
         cfg.model_short = Path(cfg.model).name
-    
-    cfg.lr_short = cfg.lr.replace("e-6", "")
+
+    if not cfg.train_lora:
+        cfg.lr_short = cfg.lr.replace("e-6", "")
+    else:
+        cfg.lr_short = cfg.lr + "," + cfg.text_lr
 
     cfg.num_repeats = int(cfg.num_repeats)
 
@@ -150,17 +173,25 @@ if __name__ == "__main__":
 
     if cfg.train_native:
         name_tag = "kohyanative"
+    elif cfg.train_lora:
+        name_tag = "kohyalora"
     else:
         name_tag = "kohyadb"
     
     name_parts = cfg.name.split("-")
     name = name_parts[0]
     name_extras = name_parts[1:]
+    name_precision = cfg.precision
+    if name_precision == "no":
+        name_precision = "fp32"
     outdir = [f"{name}{cfg.num_images}",
                 *name_extras,
                 name_tag,
                 cfg.model_short,
-                f"batch{cfg.batch}"]
+                f"batch{cfg.batch}",
+                *([cfg.lr_scheduler] if cfg.lr_scheduler != LR_SCHEDULER_DEFAULT else []),
+                *([name_precision] if name_precision != PRECISION_DEFAULT else [])
+            ]
     if cfg.num_repeats > 1:
         outdir.append(f"repeats{cfg.num_repeats}")
     outdir = "-".join(outdir)
@@ -174,6 +205,8 @@ if __name__ == "__main__":
 
     if cfg.train_dreambooth:
         script = "train_db.py"
+    elif cfg.train_lora:
+        script = "train_network.py"
     else:
         script = "fine_tune.py"
     args = [
@@ -185,26 +218,39 @@ if __name__ == "__main__":
         f"--train_data_dir={cfg.instance_dir}",
         f"--learning_rate={cfg.lr}",
         f"--max_train_steps={cfg.num_steps}",
-        f"--lr_scheduler=constant",
+        f"--lr_scheduler={cfg.lr_scheduler}",
         "--lr_warmup_steps=0",
         f"--train_batch_size={cfg.batch}",
         f"--seed={cfg.seed}",
         "--gradient_checkpointing", "--use_8bit_adam", "--xformers",
-        "--mixed_precision=bf16",
+        f"--mixed_precision={cfg.precision}",
         f"--save_every_n_epochs={cfg.save_epochs}",
         *([f"--save_min_epochs={cfg.save_min_epochs}"] if cfg.save_min_epochs else []),
         "--save_state",
         f"--logging_dir={outdir}/logs"
     ]
 
+    if cfg.train_lora:
+        args.append("--network_module=networks.lora")
+        args.append("--network_dim=128")
+        # args.append(f"--unet_lr={cfg.lr}")
+        # args.append(f"--text_encoder_lr={cfg.text_lr}")
+
+    if "stable-diffusion-2-1-base" in cfg.model or "stable-diffusion-2-base" in cfg.model:
+        args.append("--v2")
+    elif "stable-diffusion-2-1" in cfg.model or "stable-diffusion-2" in cfg.model:
+        args.append("--v2")
+        args.append("--v_parameterization")
+
     Path(outdir).mkdir(exist_ok=True)
 
     if cfg.train_dreambooth:
         args.append(f"--reg_data_dir={cfg.reg_dir}")
         args.append("--prior_loss_weight=1.0")
-        args.append("--resolution=512,512")
+        args.append(f"--resolution={cfg.resolution},{cfg.resolution}")
     else:
-        args.append("--train_text_encoder")
+        if cfg.train_native:
+            args.append("--train_text_encoder")
         metadata_filename = prepare_native(cfg, outdir)
         args.extend(["--in_json", metadata_filename])
     
@@ -222,9 +268,19 @@ if __name__ == "__main__":
         print(f"STEPS = {cfg.num_steps} @ {cfg.lr}\n", file=file)
         print(f"training images in {cfg.instance_dir}:", file=file)
         for path in get_images(Path(cfg.instance_dir)):
+            if not path.suffix in SUFFIXES:
+                continue
+            caption_filename = path.with_suffix(".caption")
+            if not caption_filename.exists():
+                caption_filename = path.with_suffix(".txt")
+            if caption_filename.exists():
+                with open(caption_filename, "r") as caption_file:
+                    caption = caption_file.read().strip()
+            else:
+                caption = ""
             hash = hashlib.sha256(open(path, "rb").read()).hexdigest()
             relpath = path.relative_to(Path(cfg.instance_dir))
-            print(f"  {relpath}: sha256 {hash}", file=file)
+            print(f"  {relpath}: sha256 {hash} | \"{caption}\"", file=file)
         
         argv = " \\\n  ".join(sys.argv)
         print("\n" + argv, file=file)
